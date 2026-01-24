@@ -111,3 +111,26 @@
     animation: spin 0.8s linear infinite;
   }
 }
+
+/* Autocomplete styles - prevent browser styling override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  -webkit-box-shadow: 0 0 0 1000px hsl(var(--secondary)) inset !important;
+  box-shadow: 0 0 0 1000px hsl(var(--secondary)) inset !important;
+  background-color: hsl(var(--secondary)) !important;
+  border-color: hsl(var(--border)) !important;
+  caret-color: hsl(var(--foreground));
+  transition: background-color 9999s ease-out 0s;
+}
+
+input:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  border-color: hsl(var(--primary)) !important;
+}
