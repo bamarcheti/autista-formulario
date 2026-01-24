@@ -20,6 +20,7 @@ import {
   capitalizeName,
   capitalizeAddress,
   sanitizeText,
+  capitalizeFirstLetter,
 } from "@/lib/validations";
 import {
   ESTADOS_BR,
@@ -300,6 +301,7 @@ export function BPCLOASForm() {
       case "nome":
         return capitalizeName(sanitizeText(value));
       case "profissao":
+        return capitalizeFirstLetter(sanitizeText(value));
       case "complemento":
         return sanitizeText(value);
       case "endereco":

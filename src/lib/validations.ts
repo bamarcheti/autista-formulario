@@ -1,3 +1,17 @@
+// Capitalize first letter of each word
+export const capitalizeFirstLetter = (text: string): string => {
+  if (!text) return text;
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+export const capitalizeWords = (text: string): string => {
+  if (!text) return text;
+  const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
+  return text.toLowerCase().trim().split(/\s+/)
+    .map(word => prepositions.includes(word) ? word : word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 // CPF Validation
 export function validateCPF(cpf: string): boolean {
   const c = cpf.replace(/\D/g, '');
