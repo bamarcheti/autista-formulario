@@ -1,27 +1,28 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { SuccessScreen } from "./SuccessScreen";
-import {
-  validateCPF,
-  validatePhoneBR,
-  validateRG,
-  validateEmail,
-  formatCPF,
-  formatPhone,
-  formatCEP,
-  formatRG,
-  capitalizeName,
-  capitalizeAddress,
-  sanitizeText,
-  capitalizeFirstLetter,
-} from "@/lib/validations";
 import {
   ESTADOS_BR,
-  NACIONALIDADES,
   ESTADOS_CIVIS,
-  fetchCitiesByState,
   fetchAddressByCEP,
+  fetchCitiesByState,
+  NACIONALIDADES,
 } from "@/lib/brazilData";
+import {
+  capitalizeAddress,
+  capitalizeFirstLetter,
+  capitalizeName,
+  formatCEP,
+  formatCPF,
+  formatPhone,
+  formatRG,
+  normalizeProfissao,
+  sanitizeText,
+  validateCPF,
+  validateEmail,
+  validatePhoneBR,
+  validateRG,
+} from "@/lib/validations";
 import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { SuccessScreen } from "./SuccessScreen";
 
 interface BeneficiaryData {
   nome: string;
@@ -123,7 +124,7 @@ function calculateAge(birthDate: string): number | null {
   const today = new Date();
   const birth = new Date(birthDate);
   if (isNaN(birth.getTime())) return null;
-  
+
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -134,7 +135,7 @@ function calculateAge(birthDate: string): number | null {
 
 export function BPCLOASForm() {
   const [tipoBeneficiario, setTipoBeneficiario] = useState<string>("");
-  
+
   const [proprioData, setProprioData] = useState<ProprioFormData>({
     nome: "",
     dataNascimento: "",
@@ -144,29 +145,40 @@ export function BPCLOASForm() {
     cpf: "",
     rg: "",
   });
-  
-  const [beneficiaryData, setBeneficiaryData] = useState<BeneficiaryData>(initialBeneficiaryData);
-  const [responsibleData, setResponsibleData] = useState<ResponsibleData>(initialResponsibleData);
-  
+
+  const [beneficiaryData, setBeneficiaryData] = useState<BeneficiaryData>(
+    initialBeneficiaryData,
+  );
+  const [responsibleData, setResponsibleData] = useState<ResponsibleData>(
+    initialResponsibleData,
+  );
+
   // Beneficiary address
-  const [addressData, setAddressData] = useState<AddressData>(initialAddressData);
-  
+  const [addressData, setAddressData] =
+    useState<AddressData>(initialAddressData);
+
   // Responsible address (separate)
-  const [responsibleAddressData, setResponsibleAddressData] = useState<AddressData>(initialAddressData);
-  const [sameAddressAsResponsible, setSameAddressAsResponsible] = useState(false);
-  
+  const [responsibleAddressData, setResponsibleAddressData] =
+    useState<AddressData>(initialAddressData);
+  const [sameAddressAsResponsible, setSameAddressAsResponsible] =
+    useState(false);
+
   // New: Adult who needs constant accompaniment
   const [needsAccompaniment, setNeedsAccompaniment] = useState(false);
-  
-  const [contactData, setContactData] = useState<ContactData>(initialContactData);
-  
+
+  const [contactData, setContactData] =
+    useState<ContactData>(initialContactData);
+
   const [validation, setValidation] = useState<ValidationState>({});
   const [cities, setCities] = useState<{ value: string; label: string }[]>([]);
-  const [responsibleCities, setResponsibleCities] = useState<{ value: string; label: string }[]>([]);
+  const [responsibleCities, setResponsibleCities] = useState<
+    { value: string; label: string }[]
+  >([]);
   const [loadingCep, setLoadingCep] = useState(false);
   const [loadingResponsibleCep, setLoadingResponsibleCep] = useState(false);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingResponsibleCities, setLoadingResponsibleCities] = useState(false);
+  const [loadingResponsibleCities, setLoadingResponsibleCities] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState<Set<string>>(new Set());
@@ -187,106 +199,139 @@ export function BPCLOASForm() {
   }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
 
   // Validate single field
-  const validateField = useCallback((name: string, value: string): { isValid: boolean; error: string } => {
-    const baseName = name.replace(/^(beneficiario_|responsavel_|proprio_|resp_addr_)/, "");
-    
-    switch (baseName) {
-      case "tipoBeneficiario":
-        return {
-          isValid: value !== "",
-          error: value === "" ? "Selecione para quem é o benefício" : "",
-        };
-      case "nome": {
-        const words = value.split(/\s+/).filter(Boolean);
-        const isValid = words.length >= 2 && words.every((w) => /^[A-Za-zÀ-ÿ]+$/.test(w));
-        return {
-          isValid,
-          error: isValid ? "" : "Digite nome e sobrenome completos (mínimo 2 palavras, apenas letras)",
-        };
-      }
-      case "dataNascimento": {
-        if (!value) {
-          return { isValid: false, error: "Informe a data de nascimento" };
-        }
-        const date = new Date(value);
-        const today = new Date();
-        const isValid = !isNaN(date.getTime()) && date <= today;
-        return {
-          isValid,
-          error: isValid ? "" : "Data de nascimento inválida",
-        };
-      }
-      case "profissao":
-        return {
-          isValid: /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value) && value.length >= 3,
-          error: value.length < 3 ? "Digite pelo menos 3 caracteres" : "Digite apenas letras, números e espaços",
-        };
-      case "cpf":
-        return {
-          isValid: validateCPF(value),
-          error: validateCPF(value) ? "" : "CPF inválido. Verifique os números digitados",
-        };
-      case "rg":
-        return {
-          isValid: validateRG(value),
-          error: validateRG(value) ? "" : "RG inválido",
-        };
-      case "parentesco":
-        return {
-          isValid: value.length > 0,
-          error: value.length === 0 ? "Selecione o grau de parentesco" : "",
-        };
-      case "cep":
-        return {
-          isValid: value.replace(/\D/g, "").length === 8,
-          error: value.replace(/\D/g, "").length !== 8 ? "CEP inválido ou não encontrado" : "",
-        };
-      case "endereco":
-      case "bairro":
-        return {
-          isValid: value.length >= 3 && /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value),
-          error: value.length < 3 ? "Digite pelo menos 3 caracteres" : "Digite um endereço válido",
-        };
-      case "numero": {
-        const n = value.toUpperCase().replace(/\s/g, "");
-        const isValid = /^[0-9]+$/.test(n) || n === "S/N" || n === "SN";
-        return { isValid, error: isValid ? "" : "Digite apenas números ou S/N" };
-      }
-      case "complemento":
-        return {
-          isValid: value.length === 0 || /^[A-Za-zÀ-ÿ0-9\s,.\-\/]+$/.test(value),
-          error: "",
-        };
-      case "telefone":
-        return {
-          isValid: validatePhoneBR(value),
-          error: validatePhoneBR(value) ? "" : "Telefone inválido (DDD + 8/9 dígitos)",
-        };
-      case "email":
-        return {
-          isValid: validateEmail(value),
-          error: validateEmail(value) ? "" : "E-mail inválido",
-        };
-      case "nacionalidade":
-      case "estadoCivil":
-      case "estado":
-      case "cidade":
-        return {
-          isValid: value.length > 0,
-          error: value.length === 0 ? "Selecione uma opção" : "",
-        };
-      default:
-        return { isValid: true, error: "" };
-    }
-  }, []);
+  const validateField = useCallback(
+    (name: string, value: string): { isValid: boolean; error: string } => {
+      const baseName = name.replace(
+        /^(beneficiario_|responsavel_|proprio_|resp_addr_)/,
+        "",
+      );
 
-  const updateValidation = useCallback((name: string, value: string) => {
-    const result = validateField(name, value);
-    setValidation((prev) => ({ ...prev, [name]: result }));
-  }, [validateField]);
+      switch (baseName) {
+        case "tipoBeneficiario":
+          return {
+            isValid: value !== "",
+            error: value === "" ? "Selecione para quem é o benefício" : "",
+          };
+        case "nome": {
+          const words = value.split(/\s+/).filter(Boolean);
+          const isValid =
+            words.length >= 2 && words.every((w) => /^[A-Za-zÀ-ÿ]+$/.test(w));
+          return {
+            isValid,
+            error: isValid
+              ? ""
+              : "Digite nome e sobrenome completos (mínimo 2 palavras, apenas letras)",
+          };
+        }
+        case "dataNascimento": {
+          if (!value) {
+            return { isValid: false, error: "Informe a data de nascimento" };
+          }
+          const date = new Date(value);
+          const today = new Date();
+          const isValid = !isNaN(date.getTime()) && date <= today;
+          return {
+            isValid,
+            error: isValid ? "" : "Data de nascimento inválida",
+          };
+        }
+        case "profissao":
+          return {
+            isValid: normalizeProfissao(value) && value.length >= 3,
+            // /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value) && value.length >= 3,
+            error:
+              value.length < 3
+                ? "Digite pelo menos 3 caracteres"
+                : "Digite apenas letras, números e espaços",
+          };
+        case "cpf":
+          return {
+            isValid: validateCPF(value),
+            error: validateCPF(value)
+              ? ""
+              : "CPF inválido. Verifique os números digitados",
+          };
+        case "rg":
+          return {
+            isValid: validateRG(value),
+            error: validateRG(value) ? "" : "RG inválido",
+          };
+        case "parentesco":
+          return {
+            isValid: value.length > 0,
+            error: value.length === 0 ? "Selecione o grau de parentesco" : "",
+          };
+        case "cep":
+          return {
+            isValid: value.replace(/\D/g, "").length === 8,
+            error:
+              value.replace(/\D/g, "").length !== 8
+                ? "CEP inválido ou não encontrado"
+                : "",
+          };
+        case "endereco":
+        case "bairro":
+          return {
+            isValid: value.length >= 3 && /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value),
+            error:
+              value.length < 3
+                ? "Digite pelo menos 3 caracteres"
+                : "Digite um endereço válido",
+          };
+        case "numero": {
+          const n = value.toUpperCase().replace(/\s/g, "");
+          const isValid = /^[0-9]+$/.test(n) || n === "S/N" || n === "SN";
+          return {
+            isValid,
+            error: isValid ? "" : "Digite apenas números ou S/N",
+          };
+        }
+        case "complemento":
+          return {
+            isValid:
+              value.length === 0 || /^[A-Za-zÀ-ÿ0-9\s,.\-\/]+$/.test(value),
+            error: "",
+          };
+        case "telefone":
+          return {
+            isValid: validatePhoneBR(value),
+            error: validatePhoneBR(value)
+              ? ""
+              : "Telefone inválido (DDD + 8/9 dígitos)",
+          };
+        case "email":
+          return {
+            isValid: validateEmail(value),
+            error: validateEmail(value) ? "" : "E-mail inválido",
+          };
+        case "nacionalidade":
+        case "estadoCivil":
+        case "estado":
+        case "cidade":
+          return {
+            isValid: value.length > 0,
+            error: value.length === 0 ? "Selecione uma opção" : "",
+          };
+        default:
+          return { isValid: true, error: "" };
+      }
+    },
+    [],
+  );
+
+  const updateValidation = useCallback(
+    (name: string, value: string) => {
+      const result = validateField(name, value);
+      setValidation((prev) => ({ ...prev, [name]: result }));
+    },
+    [validateField],
+  );
 
   const formatValue = (name: string, value: string): string => {
-    const baseName = name.replace(/^(beneficiario_|responsavel_|proprio_|resp_addr_)/, "");
+    const baseName = name.replace(
+      /^(beneficiario_|responsavel_|proprio_|resp_addr_)/,
+      "",
+    );
     switch (baseName) {
       case "cpf":
         return formatCPF(value);
@@ -304,7 +349,10 @@ export function BPCLOASForm() {
   };
 
   const sanitizeValue = (name: string, value: string): string => {
-    const baseName = name.replace(/^(beneficiario_|responsavel_|proprio_|resp_addr_)/, "");
+    const baseName = name.replace(
+      /^(beneficiario_|responsavel_|proprio_|resp_addr_)/,
+      "",
+    );
     switch (baseName) {
       case "nome":
         return capitalizeName(sanitizeText(value));
@@ -322,12 +370,15 @@ export function BPCLOASForm() {
     }
   };
 
+  // Aceita letras Unicode (com acento), números e espaços
+  const RE_PROFISSAO = /^[\p{L}\p{N} ]*$/u;
+
   // Generic input handler
   const handleInputChange = (
     setter: React.Dispatch<React.SetStateAction<any>>,
     name: string,
     value: string,
-    prefix: string
+    prefix: string,
   ) => {
     const formattedValue = formatValue(name, value);
     setter((prev: any) => ({ ...prev, [name]: formattedValue }));
@@ -341,7 +392,7 @@ export function BPCLOASForm() {
     data: any,
     setter: React.Dispatch<React.SetStateAction<any>>,
     name: string,
-    prefix: string
+    prefix: string,
   ) => {
     const prefixedName = `${prefix}_${name}`;
     setTouched((prev) => new Set(prev).add(prefixedName));
@@ -375,29 +426,33 @@ export function BPCLOASForm() {
         const data = await fetchAddressByCEP(cep);
         if (data) {
           const updates: Partial<AddressData> = {};
-          if (data.logradouro) updates.endereco = capitalizeAddress(data.logradouro);
+          if (data.logradouro)
+            updates.endereco = capitalizeAddress(data.logradouro);
           if (data.bairro) updates.bairro = capitalizeAddress(data.bairro);
           if (data.uf) updates.estado = data.uf;
-          
+
           setAddressData((prev) => ({ ...prev, ...updates }));
-          
+
           if (data.uf) {
             setLoadingCities(true);
             const citiesData = await fetchCitiesByState(data.uf);
-            const cityOptions = citiesData.map((c) => ({ value: c.nome, label: c.nome }));
+            const cityOptions = citiesData.map((c) => ({
+              value: c.nome,
+              label: c.nome,
+            }));
             setCities(cityOptions);
             setLoadingCities(false);
-            
+
             if (data.localidade) {
               const match = cityOptions.find(
-                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase()
+                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase(),
               );
               if (match) {
                 setAddressData((prev) => ({ ...prev, cidade: match.value }));
               }
             }
           }
-          
+
           updateValidation("cep", cep);
           if (data.logradouro) updateValidation("endereco", data.logradouro);
           if (data.bairro) updateValidation("bairro", data.bairro);
@@ -424,31 +479,39 @@ export function BPCLOASForm() {
         const data = await fetchAddressByCEP(cep);
         if (data) {
           const updates: Partial<AddressData> = {};
-          if (data.logradouro) updates.endereco = capitalizeAddress(data.logradouro);
+          if (data.logradouro)
+            updates.endereco = capitalizeAddress(data.logradouro);
           if (data.bairro) updates.bairro = capitalizeAddress(data.bairro);
           if (data.uf) updates.estado = data.uf;
-          
+
           setResponsibleAddressData((prev) => ({ ...prev, ...updates }));
-          
+
           if (data.uf) {
             setLoadingResponsibleCities(true);
             const citiesData = await fetchCitiesByState(data.uf);
-            const cityOptions = citiesData.map((c) => ({ value: c.nome, label: c.nome }));
+            const cityOptions = citiesData.map((c) => ({
+              value: c.nome,
+              label: c.nome,
+            }));
             setResponsibleCities(cityOptions);
             setLoadingResponsibleCities(false);
-            
+
             if (data.localidade) {
               const match = cityOptions.find(
-                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase()
+                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase(),
               );
               if (match) {
-                setResponsibleAddressData((prev) => ({ ...prev, cidade: match.value }));
+                setResponsibleAddressData((prev) => ({
+                  ...prev,
+                  cidade: match.value,
+                }));
               }
             }
           }
-          
+
           updateValidation("resp_addr_cep", cep);
-          if (data.logradouro) updateValidation("resp_addr_endereco", data.logradouro);
+          if (data.logradouro)
+            updateValidation("resp_addr_endereco", data.logradouro);
           if (data.bairro) updateValidation("resp_addr_bairro", data.bairro);
           if (data.uf) updateValidation("resp_addr_estado", data.uf);
         }
@@ -492,8 +555,12 @@ export function BPCLOASForm() {
     const loadCities = async () => {
       setLoadingResponsibleCities(true);
       try {
-        const citiesData = await fetchCitiesByState(responsibleAddressData.estado);
-        setResponsibleCities(citiesData.map((c) => ({ value: c.nome, label: c.nome })));
+        const citiesData = await fetchCitiesByState(
+          responsibleAddressData.estado,
+        );
+        setResponsibleCities(
+          citiesData.map((c) => ({ value: c.nome, label: c.nome })),
+        );
       } catch {
         console.error("Erro ao carregar cidades");
       }
@@ -507,7 +574,14 @@ export function BPCLOASForm() {
   const isFormValid = useCallback(() => {
     if (!tipoBeneficiario) return false;
 
-    const addressFields: (keyof AddressData)[] = ["cep", "endereco", "numero", "bairro", "estado", "cidade"];
+    const addressFields: (keyof AddressData)[] = [
+      "cep",
+      "endereco",
+      "numero",
+      "bairro",
+      "estado",
+      "cidade",
+    ];
     const addressValid = addressFields.every((field) => {
       const result = validateField(field, addressData[field]);
       return result.isValid;
@@ -522,24 +596,51 @@ export function BPCLOASForm() {
     if (!addressValid || !contactValid) return false;
 
     if (tipoBeneficiario === "proprio") {
-      const proprioFields: (keyof ProprioFormData)[] = ["nome", "dataNascimento", "nacionalidade", "estadoCivil", "profissao", "cpf"];
+      const proprioFields: (keyof ProprioFormData)[] = [
+        "nome",
+        "dataNascimento",
+        "nacionalidade",
+        "estadoCivil",
+        "profissao",
+        "cpf",
+      ];
       return proprioFields.every((field) => {
         const result = validateField(`proprio_${field}`, proprioData[field]);
         return result.isValid;
       });
     } else {
-      const beneficiaryFields: (keyof BeneficiaryData)[] = ["nome", "dataNascimento", "nacionalidade", "estadoCivil", "profissao", "cpf"];
+      const beneficiaryFields: (keyof BeneficiaryData)[] = [
+        "nome",
+        "dataNascimento",
+        "nacionalidade",
+        "estadoCivil",
+        "profissao",
+        "cpf",
+      ];
       const beneficiaryValid = beneficiaryFields.every((field) => {
-        const result = validateField(`beneficiario_${field}`, beneficiaryData[field]);
+        const result = validateField(
+          `beneficiario_${field}`,
+          beneficiaryData[field],
+        );
         return result.isValid;
       });
 
       if (!beneficiaryValid) return false;
 
       if (showResponsibleSection) {
-        const responsibleFields: (keyof ResponsibleData)[] = ["nome", "nacionalidade", "estadoCivil", "profissao", "cpf", "parentesco"];
+        const responsibleFields: (keyof ResponsibleData)[] = [
+          "nome",
+          "nacionalidade",
+          "estadoCivil",
+          "profissao",
+          "cpf",
+          "parentesco",
+        ];
         const responsibleValid = responsibleFields.every((field) => {
-          const result = validateField(`responsavel_${field}`, responsibleData[field]);
+          const result = validateField(
+            `responsavel_${field}`,
+            responsibleData[field],
+          );
           return result.isValid;
         });
 
@@ -548,7 +649,10 @@ export function BPCLOASForm() {
         // Validate responsible address if not same
         if (!sameAddressAsResponsible) {
           const respAddrValid = addressFields.every((field) => {
-            const result = validateField(`resp_addr_${field}`, responsibleAddressData[field]);
+            const result = validateField(
+              `resp_addr_${field}`,
+              responsibleAddressData[field],
+            );
             return result.isValid;
           });
           if (!respAddrValid) return false;
@@ -557,12 +661,23 @@ export function BPCLOASForm() {
 
       return true;
     }
-  }, [tipoBeneficiario, proprioData, beneficiaryData, responsibleData, addressData, responsibleAddressData, contactData, showResponsibleSection, sameAddressAsResponsible, validateField]);
+  }, [
+    tipoBeneficiario,
+    proprioData,
+    beneficiaryData,
+    responsibleData,
+    addressData,
+    responsibleAddressData,
+    contactData,
+    showResponsibleSection,
+    sameAddressAsResponsible,
+    validateField,
+  ]);
 
   // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!isFormValid()) return;
 
     setIsSubmitting(true);
@@ -571,7 +686,7 @@ export function BPCLOASForm() {
       tipo_caso: "bpc_loas_autismo",
       tipo_beneficiario: tipoBeneficiario,
       dataEnvio: new Date().toISOString(),
-      
+
       telefone: contactData.telefone.replace(/\D/g, ""),
       email: contactData.email.trim().toLowerCase(),
     };
@@ -584,12 +699,17 @@ export function BPCLOASForm() {
       payload.profissao = sanitizeText(proprioData.profissao);
       payload.cpf = proprioData.cpf.replace(/\D/g, "");
       payload.rg = proprioData.rg.trim();
-      payload.rg_normalizado = proprioData.rg.toUpperCase().replace(/[^\dX]/g, "");
-      
+      payload.rg_normalizado = proprioData.rg
+        .toUpperCase()
+        .replace(/[^\dX]/g, "");
+
       // Address
       payload.cep = addressData.cep.replace(/\D/g, "");
       payload.endereco = sanitizeText(addressData.endereco);
-      payload.numero = addressData.numero.trim().toUpperCase().replace(/\s/g, "");
+      payload.numero = addressData.numero
+        .trim()
+        .toUpperCase()
+        .replace(/\s/g, "");
       payload.complemento = sanitizeText(addressData.complemento);
       payload.bairro = sanitizeText(addressData.bairro);
       payload.cidade = addressData.cidade;
@@ -615,12 +735,14 @@ export function BPCLOASForm() {
           bairro: sanitizeText(addressData.bairro),
           cidade: addressData.cidade,
           estado: addressData.estado,
-        }
+        },
       };
 
       // Responsible data
       if (showResponsibleSection) {
-        const respAddr = sameAddressAsResponsible ? addressData : responsibleAddressData;
+        const respAddr = sameAddressAsResponsible
+          ? addressData
+          : responsibleAddressData;
         payload.responsavel = {
           parentesco: responsibleData.parentesco,
           nome: sanitizeText(responsibleData.nome),
@@ -629,7 +751,9 @@ export function BPCLOASForm() {
           profissao: sanitizeText(responsibleData.profissao),
           cpf: responsibleData.cpf.replace(/\D/g, ""),
           rg: responsibleData.rg.trim(),
-          rg_normalizado: responsibleData.rg.toUpperCase().replace(/[^\dX]/g, ""),
+          rg_normalizado: responsibleData.rg
+            .toUpperCase()
+            .replace(/[^\dX]/g, ""),
           mesmo_endereco_beneficiario: sameAddressAsResponsible,
           endereco: {
             cep: respAddr.cep.replace(/\D/g, ""),
@@ -639,7 +763,7 @@ export function BPCLOASForm() {
             bairro: sanitizeText(respAddr.bairro),
             cidade: respAddr.cidade,
             estado: respAddr.estado,
-          }
+          },
         };
       }
     }
@@ -651,7 +775,7 @@ export function BPCLOASForm() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (response.ok) {
@@ -663,7 +787,8 @@ export function BPCLOASForm() {
       console.error("Erro:", err);
       let msg = "Erro ao enviar formulário.";
       if (!navigator.onLine) {
-        msg = "Sem conexão com a internet. Verifique sua conexão e tente novamente.";
+        msg =
+          "Sem conexão com a internet. Verifique sua conexão e tente novamente.";
       }
       alert(msg);
     }
@@ -694,7 +819,8 @@ export function BPCLOASForm() {
   const labelClassName = "block text-sm font-medium text-muted-foreground mb-2";
   const requiredSpan = <span className="text-destructive ml-1">*</span>;
   const errorClassName = "text-destructive text-xs mt-1";
-  const sectionTitleClassName = "text-lg font-semibold text-primary pb-2 border-b border-border mb-5";
+  const sectionTitleClassName =
+    "text-lg font-semibold text-primary pb-2 border-b border-border mb-5";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -718,8 +844,12 @@ export function BPCLOASForm() {
                 : "border-border hover:border-primary/50"
             }`}
           >
-            <span className="font-semibold text-foreground">Para mim mesmo</span>
-            <p className="text-sm text-muted-foreground mt-1">Eu sou o beneficiário</p>
+            <span className="font-semibold text-foreground">
+              Para mim mesmo
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">
+              Eu sou o beneficiário
+            </p>
           </button>
           <button
             type="button"
@@ -741,8 +871,12 @@ export function BPCLOASForm() {
                 : "border-border hover:border-primary/50"
             }`}
           >
-            <span className="font-semibold text-foreground">Para outra pessoa</span>
-            <p className="text-sm text-muted-foreground mt-1">Sou responsável pelo beneficiário</p>
+            <span className="font-semibold text-foreground">
+              Para outra pessoa
+            </span>
+            <p className="text-sm text-muted-foreground mt-1">
+              Sou responsável pelo beneficiário
+            </p>
           </button>
         </div>
       </div>
@@ -754,67 +888,141 @@ export function BPCLOASForm() {
 
           <div className="space-y-4">
             <div>
-              <label className={labelClassName}>Nome Completo{requiredSpan}</label>
+              <label className={labelClassName}>
+                Nome Completo{requiredSpan}
+              </label>
               <input
                 type="text"
                 value={proprioData.nome}
-                onChange={(e) => handleInputChange(setProprioData, "nome", e.target.value, "proprio")}
-                onBlur={() => handleInputBlur(proprioData, setProprioData, "nome", "proprio")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setProprioData,
+                    "nome",
+                    e.target.value,
+                    "proprio",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    proprioData,
+                    setProprioData,
+                    "nome",
+                    "proprio",
+                  )
+                }
                 placeholder="Digite seu nome completo"
                 maxLength={100}
                 className={`${inputClassName(getFieldState("proprio", "nome"))} capitalize`}
               />
-              {getError("proprio", "nome") && <p className={errorClassName}>{getError("proprio", "nome")}</p>}
+              {getError("proprio", "nome") && (
+                <p className={errorClassName}>{getError("proprio", "nome")}</p>
+              )}
             </div>
 
             <div>
-              <label className={labelClassName}>Data de Nascimento{requiredSpan}</label>
+              <label className={labelClassName}>
+                Data de Nascimento{requiredSpan}
+              </label>
               <input
                 type="date"
                 value={proprioData.dataNascimento}
-                onChange={(e) => handleInputChange(setProprioData, "dataNascimento", e.target.value, "proprio")}
-                onBlur={() => handleInputBlur(proprioData, setProprioData, "dataNascimento", "proprio")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setProprioData,
+                    "dataNascimento",
+                    e.target.value,
+                    "proprio",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    proprioData,
+                    setProprioData,
+                    "dataNascimento",
+                    "proprio",
+                  )
+                }
                 max={new Date().toISOString().split("T")[0]}
-                className={inputClassName(getFieldState("proprio", "dataNascimento"))}
+                className={inputClassName(
+                  getFieldState("proprio", "dataNascimento"),
+                )}
               />
-              {getError("proprio", "dataNascimento") && <p className={errorClassName}>{getError("proprio", "dataNascimento")}</p>}
+              {getError("proprio", "dataNascimento") && (
+                <p className={errorClassName}>
+                  {getError("proprio", "dataNascimento")}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClassName}>Nacionalidade{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Nacionalidade{requiredSpan}
+                </label>
                 <select
                   value={proprioData.nacionalidade}
                   onChange={(e) => {
-                    handleInputChange(setProprioData, "nacionalidade", e.target.value, "proprio");
-                    setTouched((prev) => new Set(prev).add("proprio_nacionalidade"));
+                    handleInputChange(
+                      setProprioData,
+                      "nacionalidade",
+                      e.target.value,
+                      "proprio",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("proprio_nacionalidade"),
+                    );
                     updateValidation("proprio_nacionalidade", e.target.value);
                   }}
-                  className={selectClassName(getFieldState("proprio", "nacionalidade"))}
+                  className={selectClassName(
+                    getFieldState("proprio", "nacionalidade"),
+                  )}
                 >
                   {NACIONALIDADES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("proprio", "nacionalidade") && <p className={errorClassName}>{getError("proprio", "nacionalidade")}</p>}
+                {getError("proprio", "nacionalidade") && (
+                  <p className={errorClassName}>
+                    {getError("proprio", "nacionalidade")}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className={labelClassName}>Estado Civil{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Estado Civil{requiredSpan}
+                </label>
                 <select
                   value={proprioData.estadoCivil}
                   onChange={(e) => {
-                    handleInputChange(setProprioData, "estadoCivil", e.target.value, "proprio");
-                    setTouched((prev) => new Set(prev).add("proprio_estadoCivil"));
+                    handleInputChange(
+                      setProprioData,
+                      "estadoCivil",
+                      e.target.value,
+                      "proprio",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("proprio_estadoCivil"),
+                    );
                     updateValidation("proprio_estadoCivil", e.target.value);
                   }}
-                  className={selectClassName(getFieldState("proprio", "estadoCivil"))}
+                  className={selectClassName(
+                    getFieldState("proprio", "estadoCivil"),
+                  )}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("proprio", "estadoCivil") && <p className={errorClassName}>{getError("proprio", "estadoCivil")}</p>}
+                {getError("proprio", "estadoCivil") && (
+                  <p className={errorClassName}>
+                    {getError("proprio", "estadoCivil")}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -823,13 +1031,31 @@ export function BPCLOASForm() {
               <input
                 type="text"
                 value={proprioData.profissao}
-                onChange={(e) => handleInputChange(setProprioData, "profissao", e.target.value, "proprio")}
-                onBlur={() => handleInputBlur(proprioData, setProprioData, "profissao", "proprio")}
+                onChange={(e) => {
+                  const raw = e.target.value;
+
+                  // se quiser bloquear qualquer char inválido já na digitação:
+                  if (!RE_PROFISSAO.test(raw)) return;
+
+                  setProprioData(normalizeProfissao(raw));
+                }}
+                onBlur={() =>
+                  handleInputBlur(
+                    proprioData,
+                    setProprioData,
+                    "profissao",
+                    "proprio",
+                  )
+                }
                 placeholder="Digite sua profissão"
                 maxLength={80}
                 className={`${inputClassName(getFieldState("proprio", "profissao"))} capitalize`}
               />
-              {getError("proprio", "profissao") && <p className={errorClassName}>{getError("proprio", "profissao")}</p>}
+              {getError("proprio", "profissao") && (
+                <p className={errorClassName}>
+                  {getError("proprio", "profissao")}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -838,14 +1064,30 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={proprioData.cpf}
-                  onChange={(e) => handleInputChange(setProprioData, "cpf", e.target.value, "proprio")}
-                  onBlur={() => handleInputBlur(proprioData, setProprioData, "cpf", "proprio")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setProprioData,
+                      "cpf",
+                      e.target.value,
+                      "proprio",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      proprioData,
+                      setProprioData,
+                      "cpf",
+                      "proprio",
+                    )
+                  }
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
                   className={inputClassName(getFieldState("proprio", "cpf"))}
                 />
-                {getError("proprio", "cpf") && <p className={errorClassName}>{getError("proprio", "cpf")}</p>}
+                {getError("proprio", "cpf") && (
+                  <p className={errorClassName}>{getError("proprio", "cpf")}</p>
+                )}
               </div>
 
               <div>
@@ -853,13 +1095,29 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={proprioData.rg}
-                  onChange={(e) => handleInputChange(setProprioData, "rg", e.target.value, "proprio")}
-                  onBlur={() => handleInputBlur(proprioData, setProprioData, "rg", "proprio")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setProprioData,
+                      "rg",
+                      e.target.value,
+                      "proprio",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      proprioData,
+                      setProprioData,
+                      "rg",
+                      "proprio",
+                    )
+                  }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
                   className={`${inputClassName(getFieldState("proprio", "rg"))} uppercase`}
                 />
-                {getError("proprio", "rg") && <p className={errorClassName}>{getError("proprio", "rg")}</p>}
+                {getError("proprio", "rg") && (
+                  <p className={errorClassName}>{getError("proprio", "rg")}</p>
+                )}
               </div>
             </div>
           </div>
@@ -873,42 +1131,89 @@ export function BPCLOASForm() {
 
           <div className="space-y-4">
             <div>
-              <label className={labelClassName}>Nome Completo do Beneficiário{requiredSpan}</label>
+              <label className={labelClassName}>
+                Nome Completo do Beneficiário{requiredSpan}
+              </label>
               <input
                 type="text"
                 value={beneficiaryData.nome}
-                onChange={(e) => handleInputChange(setBeneficiaryData, "nome", e.target.value, "beneficiario")}
-                onBlur={() => handleInputBlur(beneficiaryData, setBeneficiaryData, "nome", "beneficiario")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setBeneficiaryData,
+                    "nome",
+                    e.target.value,
+                    "beneficiario",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    beneficiaryData,
+                    setBeneficiaryData,
+                    "nome",
+                    "beneficiario",
+                  )
+                }
                 placeholder="Digite o nome completo do beneficiário"
                 maxLength={100}
                 className={`${inputClassName(getFieldState("beneficiario", "nome"))} capitalize`}
               />
-              {getError("beneficiario", "nome") && <p className={errorClassName}>{getError("beneficiario", "nome")}</p>}
+              {getError("beneficiario", "nome") && (
+                <p className={errorClassName}>
+                  {getError("beneficiario", "nome")}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className={labelClassName}>Data de Nascimento{requiredSpan}</label>
+              <label className={labelClassName}>
+                Data de Nascimento{requiredSpan}
+              </label>
               <input
                 type="date"
                 value={beneficiaryData.dataNascimento}
-                onChange={(e) => handleInputChange(setBeneficiaryData, "dataNascimento", e.target.value, "beneficiario")}
-                onBlur={() => handleInputBlur(beneficiaryData, setBeneficiaryData, "dataNascimento", "beneficiario")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setBeneficiaryData,
+                    "dataNascimento",
+                    e.target.value,
+                    "beneficiario",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    beneficiaryData,
+                    setBeneficiaryData,
+                    "dataNascimento",
+                    "beneficiario",
+                  )
+                }
                 max={new Date().toISOString().split("T")[0]}
-                className={inputClassName(getFieldState("beneficiario", "dataNascimento"))}
+                className={inputClassName(
+                  getFieldState("beneficiario", "dataNascimento"),
+                )}
               />
-              {getError("beneficiario", "dataNascimento") && <p className={errorClassName}>{getError("beneficiario", "dataNascimento")}</p>}
+              {getError("beneficiario", "dataNascimento") && (
+                <p className={errorClassName}>
+                  {getError("beneficiario", "dataNascimento")}
+                </p>
+              )}
             </div>
 
             {/* Show age and accompaniment option */}
             {beneficiaryAge !== null && (
               <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  Idade do beneficiário: <span className="font-semibold text-foreground">{beneficiaryAge} anos</span>
+                  Idade do beneficiário:{" "}
+                  <span className="font-semibold text-foreground">
+                    {beneficiaryAge} anos
+                  </span>
                   {beneficiaryAge < 18 && (
-                    <span className="ml-2 text-primary">• Será necessário informar o responsável legal</span>
+                    <span className="ml-2 text-primary">
+                      • Será necessário informar o responsável legal
+                    </span>
                   )}
                 </p>
-                
+
                 {/* Show accompaniment checkbox for adults (18+) */}
                 {beneficiaryAge >= 18 && (
                   <label className="flex items-start gap-3 cursor-pointer group">
@@ -916,16 +1221,17 @@ export function BPCLOASForm() {
                       type="checkbox"
                       checked={needsAccompaniment}
                       onChange={(e) => setNeedsAccompaniment(e.target.checked)}
-                    className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary accent-primary
+                      className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary accent-primary
                       focus:ring-primary focus:ring-offset-0 cursor-pointer"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      O beneficiário necessita de acompanhamento constante
-                    </span>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Marque esta opção se o beneficiário, mesmo sendo maior de idade, precisa de um responsável legal ou curador
-                    </p>
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                        O beneficiário necessita de acompanhamento constante
+                      </span>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Marque esta opção se o beneficiário, mesmo sendo maior
+                        de idade, precisa de um responsável legal ou curador
+                      </p>
                     </div>
                   </label>
                 )}
@@ -934,39 +1240,79 @@ export function BPCLOASForm() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClassName}>Nacionalidade{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Nacionalidade{requiredSpan}
+                </label>
                 <select
                   value={beneficiaryData.nacionalidade}
                   onChange={(e) => {
-                    handleInputChange(setBeneficiaryData, "nacionalidade", e.target.value, "beneficiario");
-                    setTouched((prev) => new Set(prev).add("beneficiario_nacionalidade"));
-                    updateValidation("beneficiario_nacionalidade", e.target.value);
+                    handleInputChange(
+                      setBeneficiaryData,
+                      "nacionalidade",
+                      e.target.value,
+                      "beneficiario",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("beneficiario_nacionalidade"),
+                    );
+                    updateValidation(
+                      "beneficiario_nacionalidade",
+                      e.target.value,
+                    );
                   }}
-                  className={selectClassName(getFieldState("beneficiario", "nacionalidade"))}
+                  className={selectClassName(
+                    getFieldState("beneficiario", "nacionalidade"),
+                  )}
                 >
                   {NACIONALIDADES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("beneficiario", "nacionalidade") && <p className={errorClassName}>{getError("beneficiario", "nacionalidade")}</p>}
+                {getError("beneficiario", "nacionalidade") && (
+                  <p className={errorClassName}>
+                    {getError("beneficiario", "nacionalidade")}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className={labelClassName}>Estado Civil{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Estado Civil{requiredSpan}
+                </label>
                 <select
                   value={beneficiaryData.estadoCivil}
                   onChange={(e) => {
-                    handleInputChange(setBeneficiaryData, "estadoCivil", e.target.value, "beneficiario");
-                    setTouched((prev) => new Set(prev).add("beneficiario_estadoCivil"));
-                    updateValidation("beneficiario_estadoCivil", e.target.value);
+                    handleInputChange(
+                      setBeneficiaryData,
+                      "estadoCivil",
+                      e.target.value,
+                      "beneficiario",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("beneficiario_estadoCivil"),
+                    );
+                    updateValidation(
+                      "beneficiario_estadoCivil",
+                      e.target.value,
+                    );
                   }}
-                  className={selectClassName(getFieldState("beneficiario", "estadoCivil"))}
+                  className={selectClassName(
+                    getFieldState("beneficiario", "estadoCivil"),
+                  )}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("beneficiario", "estadoCivil") && <p className={errorClassName}>{getError("beneficiario", "estadoCivil")}</p>}
+                {getError("beneficiario", "estadoCivil") && (
+                  <p className={errorClassName}>
+                    {getError("beneficiario", "estadoCivil")}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -975,13 +1321,31 @@ export function BPCLOASForm() {
               <input
                 type="text"
                 value={beneficiaryData.profissao}
-                onChange={(e) => handleInputChange(setBeneficiaryData, "profissao", e.target.value, "beneficiario")}
-                onBlur={() => handleInputBlur(beneficiaryData, setBeneficiaryData, "profissao", "beneficiario")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setBeneficiaryData,
+                    "profissao",
+                    e.target.value,
+                    "beneficiario",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    beneficiaryData,
+                    setBeneficiaryData,
+                    "profissao",
+                    "beneficiario",
+                  )
+                }
                 placeholder="Digite a profissão"
                 maxLength={80}
                 className={`${inputClassName(getFieldState("beneficiario", "profissao"))} capitalize`}
               />
-              {getError("beneficiario", "profissao") && <p className={errorClassName}>{getError("beneficiario", "profissao")}</p>}
+              {getError("beneficiario", "profissao") && (
+                <p className={errorClassName}>
+                  {getError("beneficiario", "profissao")}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -990,14 +1354,34 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={beneficiaryData.cpf}
-                  onChange={(e) => handleInputChange(setBeneficiaryData, "cpf", e.target.value, "beneficiario")}
-                  onBlur={() => handleInputBlur(beneficiaryData, setBeneficiaryData, "cpf", "beneficiario")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setBeneficiaryData,
+                      "cpf",
+                      e.target.value,
+                      "beneficiario",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      beneficiaryData,
+                      setBeneficiaryData,
+                      "cpf",
+                      "beneficiario",
+                    )
+                  }
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
-                  className={inputClassName(getFieldState("beneficiario", "cpf"))}
+                  className={inputClassName(
+                    getFieldState("beneficiario", "cpf"),
+                  )}
                 />
-                {getError("beneficiario", "cpf") && <p className={errorClassName}>{getError("beneficiario", "cpf")}</p>}
+                {getError("beneficiario", "cpf") && (
+                  <p className={errorClassName}>
+                    {getError("beneficiario", "cpf")}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1005,13 +1389,31 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={beneficiaryData.rg}
-                  onChange={(e) => handleInputChange(setBeneficiaryData, "rg", e.target.value, "beneficiario")}
-                  onBlur={() => handleInputBlur(beneficiaryData, setBeneficiaryData, "rg", "beneficiario")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setBeneficiaryData,
+                      "rg",
+                      e.target.value,
+                      "beneficiario",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      beneficiaryData,
+                      setBeneficiaryData,
+                      "rg",
+                      "beneficiario",
+                    )
+                  }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
                   className={`${inputClassName(getFieldState("beneficiario", "rg"))} uppercase`}
                 />
-                {getError("beneficiario", "rg") && <p className={errorClassName}>{getError("beneficiario", "rg")}</p>}
+                {getError("beneficiario", "rg") && (
+                  <p className={errorClassName}>
+                    {getError("beneficiario", "rg")}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1022,7 +1424,9 @@ export function BPCLOASForm() {
       {tipoBeneficiario && (
         <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
           <h3 className={sectionTitleClassName}>
-            {tipoBeneficiario === "proprio" ? "Endereço" : "Endereço do Beneficiário"}
+            {tipoBeneficiario === "proprio"
+              ? "Endereço"
+              : "Endereço do Beneficiário"}
           </h3>
 
           <div className="space-y-4">
@@ -1043,11 +1447,26 @@ export function BPCLOASForm() {
                 placeholder="00000-000"
                 maxLength={9}
                 inputMode="numeric"
-                className={inputClassName(touched.has("cep") && validation.cep ? (validation.cep.isValid ? "valid" : "invalid") : "")}
+                className={inputClassName(
+                  touched.has("cep") && validation.cep
+                    ? validation.cep.isValid
+                      ? "valid"
+                      : "invalid"
+                    : "",
+                )}
               />
-              <p className="text-muted-foreground text-xs mt-1">O endereço será preenchido automaticamente</p>
-              {loadingCep && <p className="text-primary text-xs mt-1 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />Buscando endereço...</p>}
-              {touched.has("cep") && validation.cep?.error && <p className={errorClassName}>{validation.cep.error}</p>}
+              <p className="text-muted-foreground text-xs mt-1">
+                O endereço será preenchido automaticamente
+              </p>
+              {loadingCep && (
+                <p className="text-primary text-xs mt-1 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Buscando endereço...
+                </p>
+              )}
+              {touched.has("cep") && validation.cep?.error && (
+                <p className={errorClassName}>{validation.cep.error}</p>
+              )}
             </div>
 
             <div>
@@ -1056,12 +1475,18 @@ export function BPCLOASForm() {
                 type="text"
                 value={addressData.endereco}
                 onChange={(e) => {
-                  setAddressData((prev) => ({ ...prev, endereco: e.target.value }));
-                  if (touched.has("endereco")) updateValidation("endereco", e.target.value);
+                  setAddressData((prev) => ({
+                    ...prev,
+                    endereco: e.target.value,
+                  }));
+                  if (touched.has("endereco"))
+                    updateValidation("endereco", e.target.value);
                 }}
                 onBlur={() => {
                   setTouched((prev) => new Set(prev).add("endereco"));
-                  const sanitized = capitalizeAddress(sanitizeText(addressData.endereco));
+                  const sanitized = capitalizeAddress(
+                    sanitizeText(addressData.endereco),
+                  );
                   setAddressData((prev) => ({ ...prev, endereco: sanitized }));
                   updateValidation("endereco", sanitized);
                 }}
@@ -1069,7 +1494,9 @@ export function BPCLOASForm() {
                 maxLength={150}
                 className={`${inputClassName(touched.has("endereco") && validation.endereco ? (validation.endereco.isValid ? "valid" : "invalid") : "")} capitalize`}
               />
-              {touched.has("endereco") && validation.endereco?.error && <p className={errorClassName}>{validation.endereco.error}</p>}
+              {touched.has("endereco") && validation.endereco?.error && (
+                <p className={errorClassName}>{validation.endereco.error}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1079,9 +1506,12 @@ export function BPCLOASForm() {
                   type="text"
                   value={addressData.numero}
                   onChange={(e) => {
-                    const formatted = e.target.value.toUpperCase().replace(/[^0-9SN\/]/g, "");
+                    const formatted = e.target.value
+                      .toUpperCase()
+                      .replace(/[^0-9SN\/]/g, "");
                     setAddressData((prev) => ({ ...prev, numero: formatted }));
-                    if (touched.has("numero")) updateValidation("numero", formatted);
+                    if (touched.has("numero"))
+                      updateValidation("numero", formatted);
                   }}
                   onBlur={() => {
                     setTouched((prev) => new Set(prev).add("numero"));
@@ -1089,9 +1519,17 @@ export function BPCLOASForm() {
                   }}
                   placeholder="Nº ou S/N"
                   maxLength={10}
-                  className={inputClassName(touched.has("numero") && validation.numero ? (validation.numero.isValid ? "valid" : "invalid") : "")}
+                  className={inputClassName(
+                    touched.has("numero") && validation.numero
+                      ? validation.numero.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                  )}
                 />
-                {touched.has("numero") && validation.numero?.error && <p className={errorClassName}>{validation.numero.error}</p>}
+                {touched.has("numero") && validation.numero?.error && (
+                  <p className={errorClassName}>{validation.numero.error}</p>
+                )}
               </div>
 
               <div>
@@ -1099,10 +1537,18 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={addressData.complemento}
-                  onChange={(e) => setAddressData((prev) => ({ ...prev, complemento: e.target.value }))}
+                  onChange={(e) =>
+                    setAddressData((prev) => ({
+                      ...prev,
+                      complemento: e.target.value,
+                    }))
+                  }
                   onBlur={() => {
                     const sanitized = sanitizeText(addressData.complemento);
-                    setAddressData((prev) => ({ ...prev, complemento: sanitized }));
+                    setAddressData((prev) => ({
+                      ...prev,
+                      complemento: sanitized,
+                    }));
                   }}
                   placeholder="Apto, Bloco, etc."
                   maxLength={50}
@@ -1117,12 +1563,18 @@ export function BPCLOASForm() {
                 type="text"
                 value={addressData.bairro}
                 onChange={(e) => {
-                  setAddressData((prev) => ({ ...prev, bairro: e.target.value }));
-                  if (touched.has("bairro")) updateValidation("bairro", e.target.value);
+                  setAddressData((prev) => ({
+                    ...prev,
+                    bairro: e.target.value,
+                  }));
+                  if (touched.has("bairro"))
+                    updateValidation("bairro", e.target.value);
                 }}
                 onBlur={() => {
                   setTouched((prev) => new Set(prev).add("bairro"));
-                  const sanitized = capitalizeAddress(sanitizeText(addressData.bairro));
+                  const sanitized = capitalizeAddress(
+                    sanitizeText(addressData.bairro),
+                  );
                   setAddressData((prev) => ({ ...prev, bairro: sanitized }));
                   updateValidation("bairro", sanitized);
                 }}
@@ -1130,7 +1582,9 @@ export function BPCLOASForm() {
                 maxLength={80}
                 className={`${inputClassName(touched.has("bairro") && validation.bairro ? (validation.bairro.isValid ? "valid" : "invalid") : "")} capitalize`}
               />
-              {touched.has("bairro") && validation.bairro?.error && <p className={errorClassName}>{validation.bairro.error}</p>}
+              {touched.has("bairro") && validation.bairro?.error && (
+                <p className={errorClassName}>{validation.bairro.error}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1139,17 +1593,31 @@ export function BPCLOASForm() {
                 <select
                   value={addressData.estado}
                   onChange={(e) => {
-                    setAddressData((prev) => ({ ...prev, estado: e.target.value, cidade: "" }));
+                    setAddressData((prev) => ({
+                      ...prev,
+                      estado: e.target.value,
+                      cidade: "",
+                    }));
                     setTouched((prev) => new Set(prev).add("estado"));
                     updateValidation("estado", e.target.value);
                   }}
-                  className={selectClassName(touched.has("estado") && validation.estado ? (validation.estado.isValid ? "valid" : "invalid") : "")}
+                  className={selectClassName(
+                    touched.has("estado") && validation.estado
+                      ? validation.estado.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                  )}
                 >
                   {ESTADOS_BR.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {touched.has("estado") && validation.estado?.error && <p className={errorClassName}>{validation.estado.error}</p>}
+                {touched.has("estado") && validation.estado?.error && (
+                  <p className={errorClassName}>{validation.estado.error}</p>
+                )}
               </div>
 
               <div>
@@ -1157,19 +1625,38 @@ export function BPCLOASForm() {
                 <select
                   value={addressData.cidade}
                   onChange={(e) => {
-                    setAddressData((prev) => ({ ...prev, cidade: e.target.value }));
+                    setAddressData((prev) => ({
+                      ...prev,
+                      cidade: e.target.value,
+                    }));
                     setTouched((prev) => new Set(prev).add("cidade"));
                     updateValidation("cidade", e.target.value);
                   }}
                   disabled={!addressData.estado || loadingCities}
-                  className={selectClassName(touched.has("cidade") && validation.cidade ? (validation.cidade.isValid ? "valid" : "invalid") : "")}
+                  className={selectClassName(
+                    touched.has("cidade") && validation.cidade
+                      ? validation.cidade.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                  )}
                 >
-                  <option value="">{loadingCities ? "Carregando..." : addressData.estado ? "Selecione a cidade" : "Selecione o estado primeiro"}</option>
+                  <option value="">
+                    {loadingCities
+                      ? "Carregando..."
+                      : addressData.estado
+                        ? "Selecione a cidade"
+                        : "Selecione o estado primeiro"}
+                  </option>
                   {cities.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {touched.has("cidade") && validation.cidade?.error && <p className={errorClassName}>{validation.cidade.error}</p>}
+                {touched.has("cidade") && validation.cidade?.error && (
+                  <p className={errorClassName}>{validation.cidade.error}</p>
+                )}
               </div>
             </div>
           </div>
@@ -1180,82 +1667,155 @@ export function BPCLOASForm() {
       {showResponsibleSection && (
         <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
           <h3 className={sectionTitleClassName}>Dados do Responsável Legal</h3>
-          
+
           <p className="text-sm text-muted-foreground -mt-3 mb-4">
-            {beneficiaryAge !== null && beneficiaryAge < 18 
+            {beneficiaryAge !== null && beneficiaryAge < 18
               ? "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
-              : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."
-            }
+              : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."}
           </p>
 
           <div className="space-y-4">
             <div>
-              <label className={labelClassName}>Grau de Parentesco{requiredSpan}</label>
+              <label className={labelClassName}>
+                Grau de Parentesco{requiredSpan}
+              </label>
               <select
                 value={responsibleData.parentesco}
                 onChange={(e) => {
-                  handleInputChange(setResponsibleData, "parentesco", e.target.value, "responsavel");
-                  setTouched((prev) => new Set(prev).add("responsavel_parentesco"));
+                  handleInputChange(
+                    setResponsibleData,
+                    "parentesco",
+                    e.target.value,
+                    "responsavel",
+                  );
+                  setTouched((prev) =>
+                    new Set(prev).add("responsavel_parentesco"),
+                  );
                   updateValidation("responsavel_parentesco", e.target.value);
                 }}
-                className={selectClassName(getFieldState("responsavel", "parentesco"))}
+                className={selectClassName(
+                  getFieldState("responsavel", "parentesco"),
+                )}
               >
                 {PARENTESCO_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
-              {getError("responsavel", "parentesco") && <p className={errorClassName}>{getError("responsavel", "parentesco")}</p>}
+              {getError("responsavel", "parentesco") && (
+                <p className={errorClassName}>
+                  {getError("responsavel", "parentesco")}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className={labelClassName}>Nome Completo do Responsável{requiredSpan}</label>
+              <label className={labelClassName}>
+                Nome Completo do Responsável{requiredSpan}
+              </label>
               <input
                 type="text"
                 value={responsibleData.nome}
-                onChange={(e) => handleInputChange(setResponsibleData, "nome", e.target.value, "responsavel")}
-                onBlur={() => handleInputBlur(responsibleData, setResponsibleData, "nome", "responsavel")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setResponsibleData,
+                    "nome",
+                    e.target.value,
+                    "responsavel",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    responsibleData,
+                    setResponsibleData,
+                    "nome",
+                    "responsavel",
+                  )
+                }
                 placeholder="Digite o nome completo do responsável"
                 maxLength={100}
                 className={`${inputClassName(getFieldState("responsavel", "nome"))} capitalize`}
               />
-              {getError("responsavel", "nome") && <p className={errorClassName}>{getError("responsavel", "nome")}</p>}
+              {getError("responsavel", "nome") && (
+                <p className={errorClassName}>
+                  {getError("responsavel", "nome")}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={labelClassName}>Nacionalidade{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Nacionalidade{requiredSpan}
+                </label>
                 <select
                   value={responsibleData.nacionalidade}
                   onChange={(e) => {
-                    handleInputChange(setResponsibleData, "nacionalidade", e.target.value, "responsavel");
-                    setTouched((prev) => new Set(prev).add("responsavel_nacionalidade"));
-                    updateValidation("responsavel_nacionalidade", e.target.value);
+                    handleInputChange(
+                      setResponsibleData,
+                      "nacionalidade",
+                      e.target.value,
+                      "responsavel",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("responsavel_nacionalidade"),
+                    );
+                    updateValidation(
+                      "responsavel_nacionalidade",
+                      e.target.value,
+                    );
                   }}
-                  className={selectClassName(getFieldState("responsavel", "nacionalidade"))}
+                  className={selectClassName(
+                    getFieldState("responsavel", "nacionalidade"),
+                  )}
                 >
                   {NACIONALIDADES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("responsavel", "nacionalidade") && <p className={errorClassName}>{getError("responsavel", "nacionalidade")}</p>}
+                {getError("responsavel", "nacionalidade") && (
+                  <p className={errorClassName}>
+                    {getError("responsavel", "nacionalidade")}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className={labelClassName}>Estado Civil{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Estado Civil{requiredSpan}
+                </label>
                 <select
                   value={responsibleData.estadoCivil}
                   onChange={(e) => {
-                    handleInputChange(setResponsibleData, "estadoCivil", e.target.value, "responsavel");
-                    setTouched((prev) => new Set(prev).add("responsavel_estadoCivil"));
+                    handleInputChange(
+                      setResponsibleData,
+                      "estadoCivil",
+                      e.target.value,
+                      "responsavel",
+                    );
+                    setTouched((prev) =>
+                      new Set(prev).add("responsavel_estadoCivil"),
+                    );
                     updateValidation("responsavel_estadoCivil", e.target.value);
                   }}
-                  className={selectClassName(getFieldState("responsavel", "estadoCivil"))}
+                  className={selectClassName(
+                    getFieldState("responsavel", "estadoCivil"),
+                  )}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
-                {getError("responsavel", "estadoCivil") && <p className={errorClassName}>{getError("responsavel", "estadoCivil")}</p>}
+                {getError("responsavel", "estadoCivil") && (
+                  <p className={errorClassName}>
+                    {getError("responsavel", "estadoCivil")}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1264,13 +1824,31 @@ export function BPCLOASForm() {
               <input
                 type="text"
                 value={responsibleData.profissao}
-                onChange={(e) => handleInputChange(setResponsibleData, "profissao", e.target.value, "responsavel")}
-                onBlur={() => handleInputBlur(responsibleData, setResponsibleData, "profissao", "responsavel")}
+                onChange={(e) =>
+                  handleInputChange(
+                    setResponsibleData,
+                    "profissao",
+                    e.target.value,
+                    "responsavel",
+                  )
+                }
+                onBlur={() =>
+                  handleInputBlur(
+                    responsibleData,
+                    setResponsibleData,
+                    "profissao",
+                    "responsavel",
+                  )
+                }
                 placeholder="Digite a profissão"
                 maxLength={80}
                 className={`${inputClassName(getFieldState("responsavel", "profissao"))} capitalize`}
               />
-              {getError("responsavel", "profissao") && <p className={errorClassName}>{getError("responsavel", "profissao")}</p>}
+              {getError("responsavel", "profissao") && (
+                <p className={errorClassName}>
+                  {getError("responsavel", "profissao")}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1279,14 +1857,34 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={responsibleData.cpf}
-                  onChange={(e) => handleInputChange(setResponsibleData, "cpf", e.target.value, "responsavel")}
-                  onBlur={() => handleInputBlur(responsibleData, setResponsibleData, "cpf", "responsavel")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setResponsibleData,
+                      "cpf",
+                      e.target.value,
+                      "responsavel",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      responsibleData,
+                      setResponsibleData,
+                      "cpf",
+                      "responsavel",
+                    )
+                  }
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
-                  className={inputClassName(getFieldState("responsavel", "cpf"))}
+                  className={inputClassName(
+                    getFieldState("responsavel", "cpf"),
+                  )}
                 />
-                {getError("responsavel", "cpf") && <p className={errorClassName}>{getError("responsavel", "cpf")}</p>}
+                {getError("responsavel", "cpf") && (
+                  <p className={errorClassName}>
+                    {getError("responsavel", "cpf")}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1294,13 +1892,31 @@ export function BPCLOASForm() {
                 <input
                   type="text"
                   value={responsibleData.rg}
-                  onChange={(e) => handleInputChange(setResponsibleData, "rg", e.target.value, "responsavel")}
-                  onBlur={() => handleInputBlur(responsibleData, setResponsibleData, "rg", "responsavel")}
+                  onChange={(e) =>
+                    handleInputChange(
+                      setResponsibleData,
+                      "rg",
+                      e.target.value,
+                      "responsavel",
+                    )
+                  }
+                  onBlur={() =>
+                    handleInputBlur(
+                      responsibleData,
+                      setResponsibleData,
+                      "rg",
+                      "responsavel",
+                    )
+                  }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
                   className={`${inputClassName(getFieldState("responsavel", "rg"))} uppercase`}
                 />
-                {getError("responsavel", "rg") && <p className={errorClassName}>{getError("responsavel", "rg")}</p>}
+                {getError("responsavel", "rg") && (
+                  <p className={errorClassName}>
+                    {getError("responsavel", "rg")}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1335,7 +1951,9 @@ export function BPCLOASForm() {
           {/* Responsible Address (if different) */}
           {!sameAddressAsResponsible && (
             <div className="space-y-4 pt-4 animate-in slide-in-from-top-4 duration-300">
-              <h4 className="text-base font-semibold text-primary/80">Endereço do Responsável</h4>
+              <h4 className="text-base font-semibold text-primary/80">
+                Endereço do Responsável
+              </h4>
 
               <div>
                 <label className={labelClassName}>CEP{requiredSpan}</label>
@@ -1344,43 +1962,86 @@ export function BPCLOASForm() {
                   value={responsibleAddressData.cep}
                   onChange={(e) => {
                     const formatted = formatCEP(e.target.value);
-                    setResponsibleAddressData((prev) => ({ ...prev, cep: formatted }));
-                    if (touched.has("resp_addr_cep")) updateValidation("resp_addr_cep", formatted);
+                    setResponsibleAddressData((prev) => ({
+                      ...prev,
+                      cep: formatted,
+                    }));
+                    if (touched.has("resp_addr_cep"))
+                      updateValidation("resp_addr_cep", formatted);
                   }}
                   onBlur={() => {
                     setTouched((prev) => new Set(prev).add("resp_addr_cep"));
-                    updateValidation("resp_addr_cep", responsibleAddressData.cep);
+                    updateValidation(
+                      "resp_addr_cep",
+                      responsibleAddressData.cep,
+                    );
                   }}
                   placeholder="00000-000"
                   maxLength={9}
                   inputMode="numeric"
-                  className={inputClassName(touched.has("resp_addr_cep") && validation.resp_addr_cep ? (validation.resp_addr_cep.isValid ? "valid" : "invalid") : "")}
+                  className={inputClassName(
+                    touched.has("resp_addr_cep") && validation.resp_addr_cep
+                      ? validation.resp_addr_cep.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                  )}
                 />
-                <p className="text-muted-foreground text-xs mt-1">O endereço será preenchido automaticamente</p>
-                {loadingResponsibleCep && <p className="text-primary text-xs mt-1 flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" />Buscando endereço...</p>}
-                {touched.has("resp_addr_cep") && validation.resp_addr_cep?.error && <p className={errorClassName}>{validation.resp_addr_cep.error}</p>}
+                <p className="text-muted-foreground text-xs mt-1">
+                  O endereço será preenchido automaticamente
+                </p>
+                {loadingResponsibleCep && (
+                  <p className="text-primary text-xs mt-1 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Buscando endereço...
+                  </p>
+                )}
+                {touched.has("resp_addr_cep") &&
+                  validation.resp_addr_cep?.error && (
+                    <p className={errorClassName}>
+                      {validation.resp_addr_cep.error}
+                    </p>
+                  )}
               </div>
 
               <div>
-                <label className={labelClassName}>Logradouro{requiredSpan}</label>
+                <label className={labelClassName}>
+                  Logradouro{requiredSpan}
+                </label>
                 <input
                   type="text"
                   value={responsibleAddressData.endereco}
                   onChange={(e) => {
-                    setResponsibleAddressData((prev) => ({ ...prev, endereco: e.target.value }));
-                    if (touched.has("resp_addr_endereco")) updateValidation("resp_addr_endereco", e.target.value);
+                    setResponsibleAddressData((prev) => ({
+                      ...prev,
+                      endereco: e.target.value,
+                    }));
+                    if (touched.has("resp_addr_endereco"))
+                      updateValidation("resp_addr_endereco", e.target.value);
                   }}
                   onBlur={() => {
-                    setTouched((prev) => new Set(prev).add("resp_addr_endereco"));
-                    const sanitized = capitalizeAddress(sanitizeText(responsibleAddressData.endereco));
-                    setResponsibleAddressData((prev) => ({ ...prev, endereco: sanitized }));
+                    setTouched((prev) =>
+                      new Set(prev).add("resp_addr_endereco"),
+                    );
+                    const sanitized = capitalizeAddress(
+                      sanitizeText(responsibleAddressData.endereco),
+                    );
+                    setResponsibleAddressData((prev) => ({
+                      ...prev,
+                      endereco: sanitized,
+                    }));
                     updateValidation("resp_addr_endereco", sanitized);
                   }}
                   placeholder="Rua, Avenida, etc."
                   maxLength={150}
                   className={`${inputClassName(touched.has("resp_addr_endereco") && validation.resp_addr_endereco ? (validation.resp_addr_endereco.isValid ? "valid" : "invalid") : "")} capitalize`}
                 />
-                {touched.has("resp_addr_endereco") && validation.resp_addr_endereco?.error && <p className={errorClassName}>{validation.resp_addr_endereco.error}</p>}
+                {touched.has("resp_addr_endereco") &&
+                  validation.resp_addr_endereco?.error && (
+                    <p className={errorClassName}>
+                      {validation.resp_addr_endereco.error}
+                    </p>
+                  )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1390,19 +2051,42 @@ export function BPCLOASForm() {
                     type="text"
                     value={responsibleAddressData.numero}
                     onChange={(e) => {
-                      const formatted = e.target.value.toUpperCase().replace(/[^0-9SN\/]/g, "");
-                      setResponsibleAddressData((prev) => ({ ...prev, numero: formatted }));
-                      if (touched.has("resp_addr_numero")) updateValidation("resp_addr_numero", formatted);
+                      const formatted = e.target.value
+                        .toUpperCase()
+                        .replace(/[^0-9SN\/]/g, "");
+                      setResponsibleAddressData((prev) => ({
+                        ...prev,
+                        numero: formatted,
+                      }));
+                      if (touched.has("resp_addr_numero"))
+                        updateValidation("resp_addr_numero", formatted);
                     }}
                     onBlur={() => {
-                      setTouched((prev) => new Set(prev).add("resp_addr_numero"));
-                      updateValidation("resp_addr_numero", responsibleAddressData.numero);
+                      setTouched((prev) =>
+                        new Set(prev).add("resp_addr_numero"),
+                      );
+                      updateValidation(
+                        "resp_addr_numero",
+                        responsibleAddressData.numero,
+                      );
                     }}
                     placeholder="Nº ou S/N"
                     maxLength={10}
-                    className={inputClassName(touched.has("resp_addr_numero") && validation.resp_addr_numero ? (validation.resp_addr_numero.isValid ? "valid" : "invalid") : "")}
+                    className={inputClassName(
+                      touched.has("resp_addr_numero") &&
+                        validation.resp_addr_numero
+                        ? validation.resp_addr_numero.isValid
+                          ? "valid"
+                          : "invalid"
+                        : "",
+                    )}
                   />
-                  {touched.has("resp_addr_numero") && validation.resp_addr_numero?.error && <p className={errorClassName}>{validation.resp_addr_numero.error}</p>}
+                  {touched.has("resp_addr_numero") &&
+                    validation.resp_addr_numero?.error && (
+                      <p className={errorClassName}>
+                        {validation.resp_addr_numero.error}
+                      </p>
+                    )}
                 </div>
 
                 <div>
@@ -1410,10 +2094,20 @@ export function BPCLOASForm() {
                   <input
                     type="text"
                     value={responsibleAddressData.complemento}
-                    onChange={(e) => setResponsibleAddressData((prev) => ({ ...prev, complemento: e.target.value }))}
+                    onChange={(e) =>
+                      setResponsibleAddressData((prev) => ({
+                        ...prev,
+                        complemento: e.target.value,
+                      }))
+                    }
                     onBlur={() => {
-                      const sanitized = sanitizeText(responsibleAddressData.complemento);
-                      setResponsibleAddressData((prev) => ({ ...prev, complemento: sanitized }));
+                      const sanitized = sanitizeText(
+                        responsibleAddressData.complemento,
+                      );
+                      setResponsibleAddressData((prev) => ({
+                        ...prev,
+                        complemento: sanitized,
+                      }));
                     }}
                     placeholder="Apto, Bloco, etc."
                     maxLength={50}
@@ -1428,20 +2122,34 @@ export function BPCLOASForm() {
                   type="text"
                   value={responsibleAddressData.bairro}
                   onChange={(e) => {
-                    setResponsibleAddressData((prev) => ({ ...prev, bairro: e.target.value }));
-                    if (touched.has("resp_addr_bairro")) updateValidation("resp_addr_bairro", e.target.value);
+                    setResponsibleAddressData((prev) => ({
+                      ...prev,
+                      bairro: e.target.value,
+                    }));
+                    if (touched.has("resp_addr_bairro"))
+                      updateValidation("resp_addr_bairro", e.target.value);
                   }}
                   onBlur={() => {
                     setTouched((prev) => new Set(prev).add("resp_addr_bairro"));
-                    const sanitized = capitalizeAddress(sanitizeText(responsibleAddressData.bairro));
-                    setResponsibleAddressData((prev) => ({ ...prev, bairro: sanitized }));
+                    const sanitized = capitalizeAddress(
+                      sanitizeText(responsibleAddressData.bairro),
+                    );
+                    setResponsibleAddressData((prev) => ({
+                      ...prev,
+                      bairro: sanitized,
+                    }));
                     updateValidation("resp_addr_bairro", sanitized);
                   }}
                   placeholder="Digite o bairro"
                   maxLength={80}
                   className={`${inputClassName(touched.has("resp_addr_bairro") && validation.resp_addr_bairro ? (validation.resp_addr_bairro.isValid ? "valid" : "invalid") : "")} capitalize`}
                 />
-                {touched.has("resp_addr_bairro") && validation.resp_addr_bairro?.error && <p className={errorClassName}>{validation.resp_addr_bairro.error}</p>}
+                {touched.has("resp_addr_bairro") &&
+                  validation.resp_addr_bairro?.error && (
+                    <p className={errorClassName}>
+                      {validation.resp_addr_bairro.error}
+                    </p>
+                  )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1450,17 +2158,37 @@ export function BPCLOASForm() {
                   <select
                     value={responsibleAddressData.estado}
                     onChange={(e) => {
-                      setResponsibleAddressData((prev) => ({ ...prev, estado: e.target.value, cidade: "" }));
-                      setTouched((prev) => new Set(prev).add("resp_addr_estado"));
+                      setResponsibleAddressData((prev) => ({
+                        ...prev,
+                        estado: e.target.value,
+                        cidade: "",
+                      }));
+                      setTouched((prev) =>
+                        new Set(prev).add("resp_addr_estado"),
+                      );
                       updateValidation("resp_addr_estado", e.target.value);
                     }}
-                    className={selectClassName(touched.has("resp_addr_estado") && validation.resp_addr_estado ? (validation.resp_addr_estado.isValid ? "valid" : "invalid") : "")}
+                    className={selectClassName(
+                      touched.has("resp_addr_estado") &&
+                        validation.resp_addr_estado
+                        ? validation.resp_addr_estado.isValid
+                          ? "valid"
+                          : "invalid"
+                        : "",
+                    )}
                   >
                     {ESTADOS_BR.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
                   </select>
-                  {touched.has("resp_addr_estado") && validation.resp_addr_estado?.error && <p className={errorClassName}>{validation.resp_addr_estado.error}</p>}
+                  {touched.has("resp_addr_estado") &&
+                    validation.resp_addr_estado?.error && (
+                      <p className={errorClassName}>
+                        {validation.resp_addr_estado.error}
+                      </p>
+                    )}
                 </div>
 
                 <div>
@@ -1468,19 +2196,46 @@ export function BPCLOASForm() {
                   <select
                     value={responsibleAddressData.cidade}
                     onChange={(e) => {
-                      setResponsibleAddressData((prev) => ({ ...prev, cidade: e.target.value }));
-                      setTouched((prev) => new Set(prev).add("resp_addr_cidade"));
+                      setResponsibleAddressData((prev) => ({
+                        ...prev,
+                        cidade: e.target.value,
+                      }));
+                      setTouched((prev) =>
+                        new Set(prev).add("resp_addr_cidade"),
+                      );
                       updateValidation("resp_addr_cidade", e.target.value);
                     }}
-                    disabled={!responsibleAddressData.estado || loadingResponsibleCities}
-                    className={selectClassName(touched.has("resp_addr_cidade") && validation.resp_addr_cidade ? (validation.resp_addr_cidade.isValid ? "valid" : "invalid") : "")}
+                    disabled={
+                      !responsibleAddressData.estado || loadingResponsibleCities
+                    }
+                    className={selectClassName(
+                      touched.has("resp_addr_cidade") &&
+                        validation.resp_addr_cidade
+                        ? validation.resp_addr_cidade.isValid
+                          ? "valid"
+                          : "invalid"
+                        : "",
+                    )}
                   >
-                    <option value="">{loadingResponsibleCities ? "Carregando..." : responsibleAddressData.estado ? "Selecione a cidade" : "Selecione o estado primeiro"}</option>
+                    <option value="">
+                      {loadingResponsibleCities
+                        ? "Carregando..."
+                        : responsibleAddressData.estado
+                          ? "Selecione a cidade"
+                          : "Selecione o estado primeiro"}
+                    </option>
                     {responsibleCities.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
                     ))}
                   </select>
-                  {touched.has("resp_addr_cidade") && validation.resp_addr_cidade?.error && <p className={errorClassName}>{validation.resp_addr_cidade.error}</p>}
+                  {touched.has("resp_addr_cidade") &&
+                    validation.resp_addr_cidade?.error && (
+                      <p className={errorClassName}>
+                        {validation.resp_addr_cidade.error}
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
@@ -1502,7 +2257,8 @@ export function BPCLOASForm() {
                 onChange={(e) => {
                   const formatted = formatPhone(e.target.value);
                   setContactData((prev) => ({ ...prev, telefone: formatted }));
-                  if (touched.has("telefone")) updateValidation("telefone", formatted);
+                  if (touched.has("telefone"))
+                    updateValidation("telefone", formatted);
                 }}
                 onBlur={() => {
                   setTouched((prev) => new Set(prev).add("telefone"));
@@ -1511,9 +2267,17 @@ export function BPCLOASForm() {
                 placeholder="(00) 00000-0000"
                 maxLength={15}
                 inputMode="numeric"
-                className={inputClassName(touched.has("telefone") && validation.telefone ? (validation.telefone.isValid ? "valid" : "invalid") : "")}
+                className={inputClassName(
+                  touched.has("telefone") && validation.telefone
+                    ? validation.telefone.isValid
+                      ? "valid"
+                      : "invalid"
+                    : "",
+                )}
               />
-              {touched.has("telefone") && validation.telefone?.error && <p className={errorClassName}>{validation.telefone.error}</p>}
+              {touched.has("telefone") && validation.telefone?.error && (
+                <p className={errorClassName}>{validation.telefone.error}</p>
+              )}
             </div>
 
             <div>
@@ -1522,8 +2286,12 @@ export function BPCLOASForm() {
                 type="email"
                 value={contactData.email}
                 onChange={(e) => {
-                  setContactData((prev) => ({ ...prev, email: e.target.value }));
-                  if (touched.has("email")) updateValidation("email", e.target.value);
+                  setContactData((prev) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }));
+                  if (touched.has("email"))
+                    updateValidation("email", e.target.value);
                 }}
                 onBlur={() => {
                   setTouched((prev) => new Set(prev).add("email"));
@@ -1533,9 +2301,17 @@ export function BPCLOASForm() {
                 }}
                 placeholder="seu@email.com"
                 maxLength={100}
-                className={inputClassName(touched.has("email") && validation.email ? (validation.email.isValid ? "valid" : "invalid") : "")}
+                className={inputClassName(
+                  touched.has("email") && validation.email
+                    ? validation.email.isValid
+                      ? "valid"
+                      : "invalid"
+                    : "",
+                )}
               />
-              {touched.has("email") && validation.email?.error && <p className={errorClassName}>{validation.email.error}</p>}
+              {touched.has("email") && validation.email?.error && (
+                <p className={errorClassName}>{validation.email.error}</p>
+              )}
             </div>
           </div>
         </div>
