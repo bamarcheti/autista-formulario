@@ -235,15 +235,16 @@ export function BPCLOASForm() {
             error: isValid ? "" : "Data de nascimento inválida",
           };
         }
-        case "profissao":
+        case "profissao": {
+          const trimmed = value.trim();
+          const isValid = trimmed.length >= 3 && /^[\p{L}\p{N}\s]+$/u.test(trimmed);
           return {
-            isValid: normalizeProfissao(value) && value.length >= 3,
-            // /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value) && value.length >= 3,
-            error:
-              value.length < 3
-                ? "Digite pelo menos 3 caracteres"
-                : "Digite apenas letras, números e espaços",
+            isValid,
+            error: isValid ? "" : trimmed.length < 3 
+              ? "Digite pelo menos 3 caracteres" 
+              : "Digite apenas letras, números e espaços",
           };
+        }
         case "cpf":
           return {
             isValid: validateCPF(value),
