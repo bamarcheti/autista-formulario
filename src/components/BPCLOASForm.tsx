@@ -13,7 +13,6 @@ import {
   formatCPF,
   formatPhone,
   formatRG,
-  normalizeProfissao,
   sanitizeText,
   validateCPF,
   validateEmail,
@@ -23,6 +22,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SuccessScreen } from "./SuccessScreen";
+import "./BPCLOASForm.css";
 
 interface BeneficiaryData {
   nome: string;
@@ -153,17 +153,14 @@ export function BPCLOASForm() {
     initialResponsibleData,
   );
 
-  // Beneficiary address
   const [addressData, setAddressData] =
     useState<AddressData>(initialAddressData);
 
-  // Responsible address (separate)
   const [responsibleAddressData, setResponsibleAddressData] =
     useState<AddressData>(initialAddressData);
   const [sameAddressAsResponsible, setSameAddressAsResponsible] =
     useState(false);
 
-  // New: Adult who needs constant accompaniment
   const [needsAccompaniment, setNeedsAccompaniment] = useState(false);
 
   const [contactData, setContactData] =
@@ -183,7 +180,6 @@ export function BPCLOASForm() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState<Set<string>>(new Set());
 
-  // Calculate beneficiary age
   const beneficiaryAge = useMemo(() => {
     if (tipoBeneficiario === "outro") {
       return calculateAge(beneficiaryData.dataNascimento);
@@ -191,14 +187,12 @@ export function BPCLOASForm() {
     return null;
   }, [tipoBeneficiario, beneficiaryData.dataNascimento]);
 
-  // Show responsible section if beneficiary is under 18 OR if adult needs accompaniment
   const showResponsibleSection = useMemo(() => {
     if (tipoBeneficiario !== "outro") return false;
     if (beneficiaryAge === null) return false;
     return beneficiaryAge < 18 || needsAccompaniment;
   }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
 
-  // Validate single field
   const validateField = useCallback(
     (name: string, value: string): { isValid: boolean; error: string } => {
       const baseName = name.replace(
@@ -371,10 +365,6 @@ export function BPCLOASForm() {
     }
   };
 
-  // Aceita letras Unicode (com acento), números e espaços
-  const RE_PROFISSAO = /^[\p{L}\p{N} ]*$/u;
-
-  // Generic input handler
   const handleInputChange = (
     setter: React.Dispatch<React.SetStateAction<any>>,
     name: string,
@@ -571,7 +561,6 @@ export function BPCLOASForm() {
     loadCities();
   }, [responsibleAddressData.estado, sameAddressAsResponsible]);
 
-  // Check if form is valid
   const isFormValid = useCallback(() => {
     if (!tipoBeneficiario) return false;
 
@@ -647,7 +636,6 @@ export function BPCLOASForm() {
 
         if (!responsibleValid) return false;
 
-        // Validate responsible address if not same
         if (!sameAddressAsResponsible) {
           const respAddrValid = addressFields.every((field) => {
             const result = validateField(
@@ -675,7 +663,6 @@ export function BPCLOASForm() {
     validateField,
   ]);
 
-  // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -704,7 +691,6 @@ export function BPCLOASForm() {
         .toUpperCase()
         .replace(/[^\dX]/g, "");
 
-      // Address
       payload.cep = addressData.cep.replace(/\D/g, "");
       payload.endereco = sanitizeText(addressData.endereco);
       payload.numero = addressData.numero
@@ -716,7 +702,6 @@ export function BPCLOASForm() {
       payload.cidade = addressData.cidade;
       payload.estado = addressData.estado;
     } else {
-      // Beneficiary data
       payload.beneficiario = {
         nome: sanitizeText(beneficiaryData.nome),
         data_nascimento: beneficiaryData.dataNascimento,
@@ -739,7 +724,6 @@ export function BPCLOASForm() {
         },
       };
 
-      // Responsible data
       if (showResponsibleSection) {
         const respAddr = sameAddressAsResponsible
           ? addressData
@@ -801,36 +785,29 @@ export function BPCLOASForm() {
     return <SuccessScreen />;
   }
 
-  const inputClassName = (state: string) => `
-    w-full px-4 py-3 rounded-lg border-2 bg-secondary text-foreground
-    placeholder:text-muted-foreground transition-all duration-300
-    focus:outline-none focus:ring-0
-    ${state === "valid" ? "border-emerald-500" : state === "invalid" ? "border-destructive" : "border-border focus:border-primary"}
-  `;
+  const getInputClass = (state: string, extra?: string) => {
+    let cls = "form-input";
+    if (state === "valid") cls += " valid";
+    if (state === "invalid") cls += " invalid";
+    if (extra) cls += ` ${extra}`;
+    return cls;
+  };
 
-  const selectClassName = (state: string) => `
-    w-full px-4 py-3 rounded-lg border-2 bg-secondary text-foreground
-    transition-all duration-300 cursor-pointer appearance-none
-    focus:outline-none focus:ring-0
-    ${state === "valid" ? "border-emerald-500" : state === "invalid" ? "border-destructive" : "border-border focus:border-primary"}
-    bg-[url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")]
-    bg-no-repeat bg-[right_14px_center] bg-[length:18px]
-  `;
-
-  const labelClassName = "block text-sm font-medium text-muted-foreground mb-2";
-  const requiredSpan = <span className="text-destructive ml-1">*</span>;
-  const errorClassName = "text-destructive text-xs mt-1";
-  const sectionTitleClassName =
-    "text-lg font-semibold text-primary pb-2 border-b border-border mb-5";
+  const getSelectClass = (state: string) => {
+    let cls = "form-select";
+    if (state === "valid") cls += " valid";
+    if (state === "invalid") cls += " invalid";
+    return cls;
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="bpc-form">
       {/* Beneficiary Type Selection */}
-      <div className="space-y-4">
-        <label className={labelClassName}>
-          Para quem é o benefício?{requiredSpan}
+      <div className="field">
+        <label className="form-label">
+          Para quem é o benefício?<span className="required-mark">*</span>
         </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="type-selector">
           <button
             type="button"
             onClick={() => {
@@ -839,18 +816,10 @@ export function BPCLOASForm() {
               setResponsibleData(initialResponsibleData);
               setNeedsAccompaniment(false);
             }}
-            className={`p-4 rounded-lg border-2 text-left transition-all duration-300 ${
-              tipoBeneficiario === "proprio"
-                ? "border-primary bg-primary/10"
-                : "border-border hover:border-primary/50"
-            }`}
+            className={`type-button ${tipoBeneficiario === "proprio" ? "selected" : ""}`}
           >
-            <span className="font-semibold text-foreground">
-              Para mim mesmo
-            </span>
-            <p className="text-sm text-muted-foreground mt-1">
-              Eu sou o beneficiário
-            </p>
+            <span className="type-button-title">Para mim mesmo</span>
+            <span className="type-button-description">Eu sou o beneficiário</span>
           </button>
           <button
             type="button"
@@ -866,31 +835,23 @@ export function BPCLOASForm() {
                 rg: "",
               });
             }}
-            className={`p-4 rounded-lg border-2 text-left transition-all duration-300 ${
-              tipoBeneficiario === "outro"
-                ? "border-primary bg-primary/10"
-                : "border-border hover:border-primary/50"
-            }`}
+            className={`type-button ${tipoBeneficiario === "outro" ? "selected" : ""}`}
           >
-            <span className="font-semibold text-foreground">
-              Para outra pessoa
-            </span>
-            <p className="text-sm text-muted-foreground mt-1">
-              Sou responsável pelo beneficiário
-            </p>
+            <span className="type-button-title">Para outra pessoa</span>
+            <span className="type-button-description">Sou responsável pelo beneficiário</span>
           </button>
         </div>
       </div>
 
       {/* "Para mim mesmo" - Own Data */}
       {tipoBeneficiario === "proprio" && (
-        <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>Seus Dados</h3>
+        <div className="form-section">
+          <h3 className="section-title">Seus Dados</h3>
 
-          <div className="space-y-4">
-            <div>
-              <label className={labelClassName}>
-                Nome Completo{requiredSpan}
+          <div className="field-group">
+            <div className="field">
+              <label className="form-label">
+                Nome Completo<span className="required-mark">*</span>
               </label>
               <input
                 type="text"
@@ -913,16 +874,16 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite seu nome completo"
                 maxLength={100}
-                className={`${inputClassName(getFieldState("proprio", "nome"))} capitalize`}
+                className={getInputClass(getFieldState("proprio", "nome"), "capitalize")}
               />
               {getError("proprio", "nome") && (
-                <p className={errorClassName}>{getError("proprio", "nome")}</p>
+                <p className="error-message">{getError("proprio", "nome")}</p>
               )}
             </div>
 
-            <div>
-              <label className={labelClassName}>
-                Data de Nascimento{requiredSpan}
+            <div className="field">
+              <label className="form-label">
+                Data de Nascimento<span className="required-mark">*</span>
               </label>
               <input
                 type="date"
@@ -944,21 +905,17 @@ export function BPCLOASForm() {
                   )
                 }
                 max={new Date().toISOString().split("T")[0]}
-                className={inputClassName(
-                  getFieldState("proprio", "dataNascimento"),
-                )}
+                className={getInputClass(getFieldState("proprio", "dataNascimento"))}
               />
               {getError("proprio", "dataNascimento") && (
-                <p className={errorClassName}>
-                  {getError("proprio", "dataNascimento")}
-                </p>
+                <p className="error-message">{getError("proprio", "dataNascimento")}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>
-                  Nacionalidade{requiredSpan}
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  Nacionalidade<span className="required-mark">*</span>
                 </label>
                 <select
                   value={proprioData.nacionalidade}
@@ -974,9 +931,7 @@ export function BPCLOASForm() {
                     );
                     updateValidation("proprio_nacionalidade", e.target.value);
                   }}
-                  className={selectClassName(
-                    getFieldState("proprio", "nacionalidade"),
-                  )}
+                  className={getSelectClass(getFieldState("proprio", "nacionalidade"))}
                 >
                   {NACIONALIDADES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -985,15 +940,13 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("proprio", "nacionalidade") && (
-                  <p className={errorClassName}>
-                    {getError("proprio", "nacionalidade")}
-                  </p>
+                  <p className="error-message">{getError("proprio", "nacionalidade")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>
-                  Estado Civil{requiredSpan}
+              <div className="field">
+                <label className="form-label">
+                  Estado Civil<span className="required-mark">*</span>
                 </label>
                 <select
                   value={proprioData.estadoCivil}
@@ -1009,9 +962,7 @@ export function BPCLOASForm() {
                     );
                     updateValidation("proprio_estadoCivil", e.target.value);
                   }}
-                  className={selectClassName(
-                    getFieldState("proprio", "estadoCivil"),
-                  )}
+                  className={getSelectClass(getFieldState("proprio", "estadoCivil"))}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -1020,26 +971,26 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("proprio", "estadoCivil") && (
-                  <p className={errorClassName}>
-                    {getError("proprio", "estadoCivil")}
-                  </p>
+                  <p className="error-message">{getError("proprio", "estadoCivil")}</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <label className={labelClassName}>Profissão{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                Profissão<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={proprioData.profissao}
-                onChange={(e) => {
-                  const raw = e.target.value;
-
-                  // se quiser bloquear qualquer char inválido já na digitação:
-                  if (!RE_PROFISSAO.test(raw)) return;
-
-                  setProprioData(normalizeProfissao(raw));
-                }}
+                onChange={(e) =>
+                  handleInputChange(
+                    setProprioData,
+                    "profissao",
+                    e.target.value,
+                    "proprio",
+                  )
+                }
                 onBlur={() =>
                   handleInputBlur(
                     proprioData,
@@ -1050,18 +1001,18 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite sua profissão"
                 maxLength={80}
-                className={`${inputClassName(getFieldState("proprio", "profissao"))} capitalize`}
+                className={getInputClass(getFieldState("proprio", "profissao"), "capitalize")}
               />
               {getError("proprio", "profissao") && (
-                <p className={errorClassName}>
-                  {getError("proprio", "profissao")}
-                </p>
+                <p className="error-message">{getError("proprio", "profissao")}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>CPF{requiredSpan}</label>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  CPF<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={proprioData.cpf}
@@ -1084,15 +1035,15 @@ export function BPCLOASForm() {
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
-                  className={inputClassName(getFieldState("proprio", "cpf"))}
+                  className={getInputClass(getFieldState("proprio", "cpf"))}
                 />
                 {getError("proprio", "cpf") && (
-                  <p className={errorClassName}>{getError("proprio", "cpf")}</p>
+                  <p className="error-message">{getError("proprio", "cpf")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>RG</label>
+              <div className="field">
+                <label className="form-label">RG</label>
                 <input
                   type="text"
                   value={proprioData.rg}
@@ -1114,10 +1065,10 @@ export function BPCLOASForm() {
                   }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
-                  className={`${inputClassName(getFieldState("proprio", "rg"))} uppercase`}
+                  className={getInputClass(getFieldState("proprio", "rg"), "uppercase")}
                 />
                 {getError("proprio", "rg") && (
-                  <p className={errorClassName}>{getError("proprio", "rg")}</p>
+                  <p className="error-message">{getError("proprio", "rg")}</p>
                 )}
               </div>
             </div>
@@ -1127,13 +1078,13 @@ export function BPCLOASForm() {
 
       {/* "Para outra pessoa" - Beneficiary Data */}
       {tipoBeneficiario === "outro" && (
-        <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>Dados do Beneficiário</h3>
+        <div className="form-section">
+          <h3 className="section-title">Dados do Beneficiário</h3>
 
-          <div className="space-y-4">
-            <div>
-              <label className={labelClassName}>
-                Nome Completo do Beneficiário{requiredSpan}
+          <div className="field-group">
+            <div className="field">
+              <label className="form-label">
+                Nome Completo do Beneficiário<span className="required-mark">*</span>
               </label>
               <input
                 type="text"
@@ -1156,18 +1107,16 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite o nome completo do beneficiário"
                 maxLength={100}
-                className={`${inputClassName(getFieldState("beneficiario", "nome"))} capitalize`}
+                className={getInputClass(getFieldState("beneficiario", "nome"), "capitalize")}
               />
               {getError("beneficiario", "nome") && (
-                <p className={errorClassName}>
-                  {getError("beneficiario", "nome")}
-                </p>
+                <p className="error-message">{getError("beneficiario", "nome")}</p>
               )}
             </div>
 
-            <div>
-              <label className={labelClassName}>
-                Data de Nascimento{requiredSpan}
+            <div className="field">
+              <label className="form-label">
+                Data de Nascimento<span className="required-mark">*</span>
               </label>
               <input
                 type="date"
@@ -1189,47 +1138,39 @@ export function BPCLOASForm() {
                   )
                 }
                 max={new Date().toISOString().split("T")[0]}
-                className={inputClassName(
-                  getFieldState("beneficiario", "dataNascimento"),
-                )}
+                className={getInputClass(getFieldState("beneficiario", "dataNascimento"))}
               />
               {getError("beneficiario", "dataNascimento") && (
-                <p className={errorClassName}>
-                  {getError("beneficiario", "dataNascimento")}
-                </p>
+                <p className="error-message">{getError("beneficiario", "dataNascimento")}</p>
               )}
             </div>
 
             {/* Show age and accompaniment option */}
             {beneficiaryAge !== null && (
-              <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
-                <p className="text-sm text-muted-foreground">
+              <div className="info-box">
+                <p className="info-box-text">
                   Idade do beneficiário:{" "}
-                  <span className="font-semibold text-foreground">
-                    {beneficiaryAge} anos
-                  </span>
+                  <span className="info-box-highlight">{beneficiaryAge} anos</span>
                   {beneficiaryAge < 18 && (
-                    <span className="ml-2 text-primary">
+                    <span className="info-box-accent">
                       • Será necessário informar o responsável legal
                     </span>
                   )}
                 </p>
 
-                {/* Show accompaniment checkbox for adults (18+) */}
                 {beneficiaryAge >= 18 && (
-                  <label className="flex items-start gap-3 cursor-pointer group">
+                  <label className="checkbox-label">
                     <input
                       type="checkbox"
                       checked={needsAccompaniment}
                       onChange={(e) => setNeedsAccompaniment(e.target.checked)}
-                      className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary accent-primary
-                      focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                      className="checkbox-input"
                     />
-                    <div>
-                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                    <div className="checkbox-content">
+                      <span className="checkbox-title">
                         O beneficiário necessita de acompanhamento constante
                       </span>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="checkbox-description">
                         Marque esta opção se o beneficiário, mesmo sendo maior
                         de idade, precisa de um responsável legal ou curador
                       </p>
@@ -1239,10 +1180,10 @@ export function BPCLOASForm() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>
-                  Nacionalidade{requiredSpan}
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  Nacionalidade<span className="required-mark">*</span>
                 </label>
                 <select
                   value={beneficiaryData.nacionalidade}
@@ -1261,9 +1202,7 @@ export function BPCLOASForm() {
                       e.target.value,
                     );
                   }}
-                  className={selectClassName(
-                    getFieldState("beneficiario", "nacionalidade"),
-                  )}
+                  className={getSelectClass(getFieldState("beneficiario", "nacionalidade"))}
                 >
                   {NACIONALIDADES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -1272,15 +1211,13 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("beneficiario", "nacionalidade") && (
-                  <p className={errorClassName}>
-                    {getError("beneficiario", "nacionalidade")}
-                  </p>
+                  <p className="error-message">{getError("beneficiario", "nacionalidade")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>
-                  Estado Civil{requiredSpan}
+              <div className="field">
+                <label className="form-label">
+                  Estado Civil<span className="required-mark">*</span>
                 </label>
                 <select
                   value={beneficiaryData.estadoCivil}
@@ -1299,9 +1236,7 @@ export function BPCLOASForm() {
                       e.target.value,
                     );
                   }}
-                  className={selectClassName(
-                    getFieldState("beneficiario", "estadoCivil"),
-                  )}
+                  className={getSelectClass(getFieldState("beneficiario", "estadoCivil"))}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -1310,15 +1245,15 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("beneficiario", "estadoCivil") && (
-                  <p className={errorClassName}>
-                    {getError("beneficiario", "estadoCivil")}
-                  </p>
+                  <p className="error-message">{getError("beneficiario", "estadoCivil")}</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <label className={labelClassName}>Profissão{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                Profissão<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={beneficiaryData.profissao}
@@ -1340,18 +1275,18 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite a profissão"
                 maxLength={80}
-                className={`${inputClassName(getFieldState("beneficiario", "profissao"))} capitalize`}
+                className={getInputClass(getFieldState("beneficiario", "profissao"), "capitalize")}
               />
               {getError("beneficiario", "profissao") && (
-                <p className={errorClassName}>
-                  {getError("beneficiario", "profissao")}
-                </p>
+                <p className="error-message">{getError("beneficiario", "profissao")}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>CPF{requiredSpan}</label>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  CPF<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={beneficiaryData.cpf}
@@ -1374,19 +1309,15 @@ export function BPCLOASForm() {
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
-                  className={inputClassName(
-                    getFieldState("beneficiario", "cpf"),
-                  )}
+                  className={getInputClass(getFieldState("beneficiario", "cpf"))}
                 />
                 {getError("beneficiario", "cpf") && (
-                  <p className={errorClassName}>
-                    {getError("beneficiario", "cpf")}
-                  </p>
+                  <p className="error-message">{getError("beneficiario", "cpf")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>RG</label>
+              <div className="field">
+                <label className="form-label">RG</label>
                 <input
                   type="text"
                   value={beneficiaryData.rg}
@@ -1408,12 +1339,10 @@ export function BPCLOASForm() {
                   }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
-                  className={`${inputClassName(getFieldState("beneficiario", "rg"))} uppercase`}
+                  className={getInputClass(getFieldState("beneficiario", "rg"), "uppercase")}
                 />
                 {getError("beneficiario", "rg") && (
-                  <p className={errorClassName}>
-                    {getError("beneficiario", "rg")}
-                  </p>
+                  <p className="error-message">{getError("beneficiario", "rg")}</p>
                 )}
               </div>
             </div>
@@ -1423,16 +1352,18 @@ export function BPCLOASForm() {
 
       {/* Beneficiary Address Section */}
       {tipoBeneficiario && (
-        <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>
+        <div className="form-section">
+          <h3 className="section-title">
             {tipoBeneficiario === "proprio"
               ? "Endereço"
               : "Endereço do Beneficiário"}
           </h3>
 
-          <div className="space-y-4">
-            <div>
-              <label className={labelClassName}>CEP{requiredSpan}</label>
+          <div className="field-group">
+            <div className="field">
+              <label className="form-label">
+                CEP<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={addressData.cep}
@@ -1448,7 +1379,7 @@ export function BPCLOASForm() {
                 placeholder="00000-000"
                 maxLength={9}
                 inputMode="numeric"
-                className={inputClassName(
+                className={getInputClass(
                   touched.has("cep") && validation.cep
                     ? validation.cep.isValid
                       ? "valid"
@@ -1456,22 +1387,22 @@ export function BPCLOASForm() {
                     : "",
                 )}
               />
-              <p className="text-muted-foreground text-xs mt-1">
-                O endereço será preenchido automaticamente
-              </p>
+              <p className="helper-text">O endereço será preenchido automaticamente</p>
               {loadingCep && (
-                <p className="text-primary text-xs mt-1 flex items-center gap-2">
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                <p className="loading-text">
+                  <Loader2 className="spinner" />
                   Buscando endereço...
                 </p>
               )}
               {touched.has("cep") && validation.cep?.error && (
-                <p className={errorClassName}>{validation.cep.error}</p>
+                <p className="error-message">{validation.cep.error}</p>
               )}
             </div>
 
-            <div>
-              <label className={labelClassName}>Logradouro{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                Logradouro<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={addressData.endereco}
@@ -1493,16 +1424,25 @@ export function BPCLOASForm() {
                 }}
                 placeholder="Rua, Avenida, etc."
                 maxLength={150}
-                className={`${inputClassName(touched.has("endereco") && validation.endereco ? (validation.endereco.isValid ? "valid" : "invalid") : "")} capitalize`}
+                className={getInputClass(
+                  touched.has("endereco") && validation.endereco
+                    ? validation.endereco.isValid
+                      ? "valid"
+                      : "invalid"
+                    : "",
+                  "capitalize",
+                )}
               />
               {touched.has("endereco") && validation.endereco?.error && (
-                <p className={errorClassName}>{validation.endereco.error}</p>
+                <p className="error-message">{validation.endereco.error}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>Número{requiredSpan}</label>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  Número<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={addressData.numero}
@@ -1520,7 +1460,7 @@ export function BPCLOASForm() {
                   }}
                   placeholder="Nº ou S/N"
                   maxLength={10}
-                  className={inputClassName(
+                  className={getInputClass(
                     touched.has("numero") && validation.numero
                       ? validation.numero.isValid
                         ? "valid"
@@ -1529,12 +1469,12 @@ export function BPCLOASForm() {
                   )}
                 />
                 {touched.has("numero") && validation.numero?.error && (
-                  <p className={errorClassName}>{validation.numero.error}</p>
+                  <p className="error-message">{validation.numero.error}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>Complemento</label>
+              <div className="field">
+                <label className="form-label">Complemento</label>
                 <input
                   type="text"
                   value={addressData.complemento}
@@ -1553,13 +1493,15 @@ export function BPCLOASForm() {
                   }}
                   placeholder="Apto, Bloco, etc."
                   maxLength={50}
-                  className={`${inputClassName("")} capitalize`}
+                  className={getInputClass("", "capitalize")}
                 />
               </div>
             </div>
 
-            <div>
-              <label className={labelClassName}>Bairro{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                Bairro<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={addressData.bairro}
@@ -1581,16 +1523,25 @@ export function BPCLOASForm() {
                 }}
                 placeholder="Digite o bairro"
                 maxLength={80}
-                className={`${inputClassName(touched.has("bairro") && validation.bairro ? (validation.bairro.isValid ? "valid" : "invalid") : "")} capitalize`}
+                className={getInputClass(
+                  touched.has("bairro") && validation.bairro
+                    ? validation.bairro.isValid
+                      ? "valid"
+                      : "invalid"
+                    : "",
+                  "capitalize",
+                )}
               />
               {touched.has("bairro") && validation.bairro?.error && (
-                <p className={errorClassName}>{validation.bairro.error}</p>
+                <p className="error-message">{validation.bairro.error}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>Estado{requiredSpan}</label>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  Estado<span className="required-mark">*</span>
+                </label>
                 <select
                   value={addressData.estado}
                   onChange={(e) => {
@@ -1602,7 +1553,7 @@ export function BPCLOASForm() {
                     setTouched((prev) => new Set(prev).add("estado"));
                     updateValidation("estado", e.target.value);
                   }}
-                  className={selectClassName(
+                  className={getSelectClass(
                     touched.has("estado") && validation.estado
                       ? validation.estado.isValid
                         ? "valid"
@@ -1617,12 +1568,14 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {touched.has("estado") && validation.estado?.error && (
-                  <p className={errorClassName}>{validation.estado.error}</p>
+                  <p className="error-message">{validation.estado.error}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>Cidade{requiredSpan}</label>
+              <div className="field">
+                <label className="form-label">
+                  Cidade<span className="required-mark">*</span>
+                </label>
                 <select
                   value={addressData.cidade}
                   onChange={(e) => {
@@ -1634,7 +1587,7 @@ export function BPCLOASForm() {
                     updateValidation("cidade", e.target.value);
                   }}
                   disabled={!addressData.estado || loadingCities}
-                  className={selectClassName(
+                  className={getSelectClass(
                     touched.has("cidade") && validation.cidade
                       ? validation.cidade.isValid
                         ? "valid"
@@ -1656,7 +1609,7 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {touched.has("cidade") && validation.cidade?.error && (
-                  <p className={errorClassName}>{validation.cidade.error}</p>
+                  <p className="error-message">{validation.cidade.error}</p>
                 )}
               </div>
             </div>
@@ -1666,19 +1619,19 @@ export function BPCLOASForm() {
 
       {/* Responsible Section */}
       {showResponsibleSection && (
-        <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>Dados do Responsável Legal</h3>
+        <div className="form-section">
+          <h3 className="section-title">Dados do Responsável Legal</h3>
 
-          <p className="text-sm text-muted-foreground -mt-3 mb-4">
+          <p className="section-description">
             {beneficiaryAge !== null && beneficiaryAge < 18
               ? "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
               : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."}
           </p>
 
-          <div className="space-y-4">
-            <div>
-              <label className={labelClassName}>
-                Grau de Parentesco{requiredSpan}
+          <div className="field-group">
+            <div className="field">
+              <label className="form-label">
+                Grau de Parentesco<span className="required-mark">*</span>
               </label>
               <select
                 value={responsibleData.parentesco}
@@ -1694,9 +1647,7 @@ export function BPCLOASForm() {
                   );
                   updateValidation("responsavel_parentesco", e.target.value);
                 }}
-                className={selectClassName(
-                  getFieldState("responsavel", "parentesco"),
-                )}
+                className={getSelectClass(getFieldState("responsavel", "parentesco"))}
               >
                 {PARENTESCO_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1705,15 +1656,13 @@ export function BPCLOASForm() {
                 ))}
               </select>
               {getError("responsavel", "parentesco") && (
-                <p className={errorClassName}>
-                  {getError("responsavel", "parentesco")}
-                </p>
+                <p className="error-message">{getError("responsavel", "parentesco")}</p>
               )}
             </div>
 
-            <div>
-              <label className={labelClassName}>
-                Nome Completo do Responsável{requiredSpan}
+            <div className="field">
+              <label className="form-label">
+                Nome Completo do Responsável<span className="required-mark">*</span>
               </label>
               <input
                 type="text"
@@ -1736,19 +1685,17 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite o nome completo do responsável"
                 maxLength={100}
-                className={`${inputClassName(getFieldState("responsavel", "nome"))} capitalize`}
+                className={getInputClass(getFieldState("responsavel", "nome"), "capitalize")}
               />
               {getError("responsavel", "nome") && (
-                <p className={errorClassName}>
-                  {getError("responsavel", "nome")}
-                </p>
+                <p className="error-message">{getError("responsavel", "nome")}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>
-                  Nacionalidade{requiredSpan}
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  Nacionalidade<span className="required-mark">*</span>
                 </label>
                 <select
                   value={responsibleData.nacionalidade}
@@ -1767,9 +1714,7 @@ export function BPCLOASForm() {
                       e.target.value,
                     );
                   }}
-                  className={selectClassName(
-                    getFieldState("responsavel", "nacionalidade"),
-                  )}
+                  className={getSelectClass(getFieldState("responsavel", "nacionalidade"))}
                 >
                   {NACIONALIDADES.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -1778,15 +1723,13 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("responsavel", "nacionalidade") && (
-                  <p className={errorClassName}>
-                    {getError("responsavel", "nacionalidade")}
-                  </p>
+                  <p className="error-message">{getError("responsavel", "nacionalidade")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>
-                  Estado Civil{requiredSpan}
+              <div className="field">
+                <label className="form-label">
+                  Estado Civil<span className="required-mark">*</span>
                 </label>
                 <select
                   value={responsibleData.estadoCivil}
@@ -1802,9 +1745,7 @@ export function BPCLOASForm() {
                     );
                     updateValidation("responsavel_estadoCivil", e.target.value);
                   }}
-                  className={selectClassName(
-                    getFieldState("responsavel", "estadoCivil"),
-                  )}
+                  className={getSelectClass(getFieldState("responsavel", "estadoCivil"))}
                 >
                   {ESTADOS_CIVIS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -1813,15 +1754,15 @@ export function BPCLOASForm() {
                   ))}
                 </select>
                 {getError("responsavel", "estadoCivil") && (
-                  <p className={errorClassName}>
-                    {getError("responsavel", "estadoCivil")}
-                  </p>
+                  <p className="error-message">{getError("responsavel", "estadoCivil")}</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <label className={labelClassName}>Profissão{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                Profissão<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={responsibleData.profissao}
@@ -1843,18 +1784,18 @@ export function BPCLOASForm() {
                 }
                 placeholder="Digite a profissão"
                 maxLength={80}
-                className={`${inputClassName(getFieldState("responsavel", "profissao"))} capitalize`}
+                className={getInputClass(getFieldState("responsavel", "profissao"), "capitalize")}
               />
               {getError("responsavel", "profissao") && (
-                <p className={errorClassName}>
-                  {getError("responsavel", "profissao")}
-                </p>
+                <p className="error-message">{getError("responsavel", "profissao")}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClassName}>CPF{requiredSpan}</label>
+            <div className="field-row">
+              <div className="field">
+                <label className="form-label">
+                  CPF<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={responsibleData.cpf}
@@ -1877,19 +1818,15 @@ export function BPCLOASForm() {
                   placeholder="000.000.000-00"
                   maxLength={14}
                   inputMode="numeric"
-                  className={inputClassName(
-                    getFieldState("responsavel", "cpf"),
-                  )}
+                  className={getInputClass(getFieldState("responsavel", "cpf"))}
                 />
                 {getError("responsavel", "cpf") && (
-                  <p className={errorClassName}>
-                    {getError("responsavel", "cpf")}
-                  </p>
+                  <p className="error-message">{getError("responsavel", "cpf")}</p>
                 )}
               </div>
 
-              <div>
-                <label className={labelClassName}>RG</label>
+              <div className="field">
+                <label className="form-label">RG</label>
                 <input
                   type="text"
                   value={responsibleData.rg}
@@ -1911,20 +1848,18 @@ export function BPCLOASForm() {
                   }
                   placeholder="Ex: 12.345.678-9"
                   maxLength={26}
-                  className={`${inputClassName(getFieldState("responsavel", "rg"))} uppercase`}
+                  className={getInputClass(getFieldState("responsavel", "rg"), "uppercase")}
                 />
                 {getError("responsavel", "rg") && (
-                  <p className={errorClassName}>
-                    {getError("responsavel", "rg")}
-                  </p>
+                  <p className="error-message">{getError("responsavel", "rg")}</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Same Address Checkbox */}
-          <div className="pt-4 border-t border-border">
-            <label className="flex items-start gap-3 cursor-pointer group">
+          <div className="section-divider">
+            <label className="checkbox-label">
               <input
                 type="checkbox"
                 checked={sameAddressAsResponsible}
@@ -1934,30 +1869,28 @@ export function BPCLOASForm() {
                     setResponsibleAddressData(initialAddressData);
                   }
                 }}
-                className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary text-primary 
-                  focus:ring-primary focus:ring-offset-0 cursor-pointer
-                  checked:bg-primary checked:border-primary"
+                className="checkbox-input"
               />
-              <div>
-                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+              <div className="checkbox-content">
+                <span className="checkbox-title">
                   O endereço do responsável é o mesmo do beneficiário
                 </span>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="checkbox-description">
                   Marque esta opção se o responsável reside no mesmo endereço
                 </p>
               </div>
             </label>
           </div>
 
-          {/* Responsible Address (if different) */}
+          {/* Responsible Address Section */}
           {!sameAddressAsResponsible && (
-            <div className="space-y-4 pt-4 animate-in slide-in-from-top-4 duration-300">
-              <h4 className="text-base font-semibold text-primary/80">
-                Endereço do Responsável
-              </h4>
+            <div className="field-group">
+              <h4 className="section-title">Endereço do Responsável</h4>
 
-              <div>
-                <label className={labelClassName}>CEP{requiredSpan}</label>
+              <div className="field">
+                <label className="form-label">
+                  CEP<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={responsibleAddressData.cep}
@@ -1972,15 +1905,12 @@ export function BPCLOASForm() {
                   }}
                   onBlur={() => {
                     setTouched((prev) => new Set(prev).add("resp_addr_cep"));
-                    updateValidation(
-                      "resp_addr_cep",
-                      responsibleAddressData.cep,
-                    );
+                    updateValidation("resp_addr_cep", responsibleAddressData.cep);
                   }}
                   placeholder="00000-000"
                   maxLength={9}
                   inputMode="numeric"
-                  className={inputClassName(
+                  className={getInputClass(
                     touched.has("resp_addr_cep") && validation.resp_addr_cep
                       ? validation.resp_addr_cep.isValid
                         ? "valid"
@@ -1988,26 +1918,22 @@ export function BPCLOASForm() {
                       : "",
                   )}
                 />
-                <p className="text-muted-foreground text-xs mt-1">
-                  O endereço será preenchido automaticamente
-                </p>
+                <p className="helper-text">O endereço será preenchido automaticamente</p>
                 {loadingResponsibleCep && (
-                  <p className="text-primary text-xs mt-1 flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                  <p className="loading-text">
+                    <Loader2 className="spinner" />
                     Buscando endereço...
                   </p>
                 )}
                 {touched.has("resp_addr_cep") &&
                   validation.resp_addr_cep?.error && (
-                    <p className={errorClassName}>
-                      {validation.resp_addr_cep.error}
-                    </p>
+                    <p className="error-message">{validation.resp_addr_cep.error}</p>
                   )}
               </div>
 
-              <div>
-                <label className={labelClassName}>
-                  Logradouro{requiredSpan}
+              <div className="field">
+                <label className="form-label">
+                  Logradouro<span className="required-mark">*</span>
                 </label>
                 <input
                   type="text"
@@ -2035,19 +1961,26 @@ export function BPCLOASForm() {
                   }}
                   placeholder="Rua, Avenida, etc."
                   maxLength={150}
-                  className={`${inputClassName(touched.has("resp_addr_endereco") && validation.resp_addr_endereco ? (validation.resp_addr_endereco.isValid ? "valid" : "invalid") : "")} capitalize`}
+                  className={getInputClass(
+                    touched.has("resp_addr_endereco") && validation.resp_addr_endereco
+                      ? validation.resp_addr_endereco.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                    "capitalize",
+                  )}
                 />
                 {touched.has("resp_addr_endereco") &&
                   validation.resp_addr_endereco?.error && (
-                    <p className={errorClassName}>
-                      {validation.resp_addr_endereco.error}
-                    </p>
+                    <p className="error-message">{validation.resp_addr_endereco.error}</p>
                   )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClassName}>Número{requiredSpan}</label>
+              <div className="field-row">
+                <div className="field">
+                  <label className="form-label">
+                    Número<span className="required-mark">*</span>
+                  </label>
                   <input
                     type="text"
                     value={responsibleAddressData.numero}
@@ -2073,9 +2006,8 @@ export function BPCLOASForm() {
                     }}
                     placeholder="Nº ou S/N"
                     maxLength={10}
-                    className={inputClassName(
-                      touched.has("resp_addr_numero") &&
-                        validation.resp_addr_numero
+                    className={getInputClass(
+                      touched.has("resp_addr_numero") && validation.resp_addr_numero
                         ? validation.resp_addr_numero.isValid
                           ? "valid"
                           : "invalid"
@@ -2084,14 +2016,12 @@ export function BPCLOASForm() {
                   />
                   {touched.has("resp_addr_numero") &&
                     validation.resp_addr_numero?.error && (
-                      <p className={errorClassName}>
-                        {validation.resp_addr_numero.error}
-                      </p>
+                      <p className="error-message">{validation.resp_addr_numero.error}</p>
                     )}
                 </div>
 
-                <div>
-                  <label className={labelClassName}>Complemento</label>
+                <div className="field">
+                  <label className="form-label">Complemento</label>
                   <input
                     type="text"
                     value={responsibleAddressData.complemento}
@@ -2112,13 +2042,15 @@ export function BPCLOASForm() {
                     }}
                     placeholder="Apto, Bloco, etc."
                     maxLength={50}
-                    className={`${inputClassName("")} capitalize`}
+                    className={getInputClass("", "capitalize")}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className={labelClassName}>Bairro{requiredSpan}</label>
+              <div className="field">
+                <label className="form-label">
+                  Bairro<span className="required-mark">*</span>
+                </label>
                 <input
                   type="text"
                   value={responsibleAddressData.bairro}
@@ -2143,19 +2075,26 @@ export function BPCLOASForm() {
                   }}
                   placeholder="Digite o bairro"
                   maxLength={80}
-                  className={`${inputClassName(touched.has("resp_addr_bairro") && validation.resp_addr_bairro ? (validation.resp_addr_bairro.isValid ? "valid" : "invalid") : "")} capitalize`}
+                  className={getInputClass(
+                    touched.has("resp_addr_bairro") && validation.resp_addr_bairro
+                      ? validation.resp_addr_bairro.isValid
+                        ? "valid"
+                        : "invalid"
+                      : "",
+                    "capitalize",
+                  )}
                 />
                 {touched.has("resp_addr_bairro") &&
                   validation.resp_addr_bairro?.error && (
-                    <p className={errorClassName}>
-                      {validation.resp_addr_bairro.error}
-                    </p>
+                    <p className="error-message">{validation.resp_addr_bairro.error}</p>
                   )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClassName}>Estado{requiredSpan}</label>
+              <div className="field-row">
+                <div className="field">
+                  <label className="form-label">
+                    Estado<span className="required-mark">*</span>
+                  </label>
                   <select
                     value={responsibleAddressData.estado}
                     onChange={(e) => {
@@ -2169,9 +2108,8 @@ export function BPCLOASForm() {
                       );
                       updateValidation("resp_addr_estado", e.target.value);
                     }}
-                    className={selectClassName(
-                      touched.has("resp_addr_estado") &&
-                        validation.resp_addr_estado
+                    className={getSelectClass(
+                      touched.has("resp_addr_estado") && validation.resp_addr_estado
                         ? validation.resp_addr_estado.isValid
                           ? "valid"
                           : "invalid"
@@ -2186,14 +2124,14 @@ export function BPCLOASForm() {
                   </select>
                   {touched.has("resp_addr_estado") &&
                     validation.resp_addr_estado?.error && (
-                      <p className={errorClassName}>
-                        {validation.resp_addr_estado.error}
-                      </p>
+                      <p className="error-message">{validation.resp_addr_estado.error}</p>
                     )}
                 </div>
 
-                <div>
-                  <label className={labelClassName}>Cidade{requiredSpan}</label>
+                <div className="field">
+                  <label className="form-label">
+                    Cidade<span className="required-mark">*</span>
+                  </label>
                   <select
                     value={responsibleAddressData.cidade}
                     onChange={(e) => {
@@ -2209,9 +2147,8 @@ export function BPCLOASForm() {
                     disabled={
                       !responsibleAddressData.estado || loadingResponsibleCities
                     }
-                    className={selectClassName(
-                      touched.has("resp_addr_cidade") &&
-                        validation.resp_addr_cidade
+                    className={getSelectClass(
+                      touched.has("resp_addr_cidade") && validation.resp_addr_cidade
                         ? validation.resp_addr_cidade.isValid
                           ? "valid"
                           : "invalid"
@@ -2233,9 +2170,7 @@ export function BPCLOASForm() {
                   </select>
                   {touched.has("resp_addr_cidade") &&
                     validation.resp_addr_cidade?.error && (
-                      <p className={errorClassName}>
-                        {validation.resp_addr_cidade.error}
-                      </p>
+                      <p className="error-message">{validation.resp_addr_cidade.error}</p>
                     )}
                 </div>
               </div>
@@ -2246,12 +2181,14 @@ export function BPCLOASForm() {
 
       {/* Contact Section */}
       {tipoBeneficiario && (
-        <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>Contato</h3>
+        <div className="form-section">
+          <h3 className="section-title">Contato</h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className={labelClassName}>Telefone{requiredSpan}</label>
+          <div className="field-row">
+            <div className="field">
+              <label className="form-label">
+                Telefone<span className="required-mark">*</span>
+              </label>
               <input
                 type="text"
                 value={contactData.telefone}
@@ -2268,7 +2205,7 @@ export function BPCLOASForm() {
                 placeholder="(00) 00000-0000"
                 maxLength={15}
                 inputMode="numeric"
-                className={inputClassName(
+                className={getInputClass(
                   touched.has("telefone") && validation.telefone
                     ? validation.telefone.isValid
                       ? "valid"
@@ -2277,12 +2214,14 @@ export function BPCLOASForm() {
                 )}
               />
               {touched.has("telefone") && validation.telefone?.error && (
-                <p className={errorClassName}>{validation.telefone.error}</p>
+                <p className="error-message">{validation.telefone.error}</p>
               )}
             </div>
 
-            <div>
-              <label className={labelClassName}>E-mail{requiredSpan}</label>
+            <div className="field">
+              <label className="form-label">
+                E-mail<span className="required-mark">*</span>
+              </label>
               <input
                 type="email"
                 value={contactData.email}
@@ -2302,7 +2241,7 @@ export function BPCLOASForm() {
                 }}
                 placeholder="seu@email.com"
                 maxLength={100}
-                className={inputClassName(
+                className={getInputClass(
                   touched.has("email") && validation.email
                     ? validation.email.isValid
                       ? "valid"
@@ -2311,7 +2250,7 @@ export function BPCLOASForm() {
                 )}
               />
               {touched.has("email") && validation.email?.error && (
-                <p className={errorClassName}>{validation.email.error}</p>
+                <p className="error-message">{validation.email.error}</p>
               )}
             </div>
           </div>
@@ -2323,14 +2262,11 @@ export function BPCLOASForm() {
         <button
           type="submit"
           disabled={!isFormValid() || isSubmitting}
-          className="w-full py-3.5 px-6 bg-primary text-primary-foreground font-semibold rounded-lg
-            transition-all duration-300 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-0.5
-            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none
-            flex items-center justify-center gap-2"
+          className="submit-button"
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="spinner" />
               Enviando...
             </>
           ) : (
