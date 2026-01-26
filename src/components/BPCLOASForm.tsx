@@ -198,6 +198,25 @@ export function BPCLOASForm() {
     return beneficiaryAge < 18 || needsAccompaniment;
   }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
 
+  // Contato enviado ao webhook será do responsável?
+  const contactIsResponsible = useMemo(() => {
+    if (tipoBeneficiario !== "outro") return false; // "proprio" => contato do próprio cliente
+    if (beneficiaryAge === null) return false;
+
+    // ✅ Regra: se é dependente (<18) OU precisa de acompanhamento, contato é do responsável
+    return beneficiaryAge < 18 || needsAccompaniment;
+  }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
+
+  const contactTitle = useMemo(() => {
+    if (tipoBeneficiario === "proprio") return "Contato";
+    if (tipoBeneficiario === "outro") {
+      return contactIsResponsible
+        ? "Contato do Responsável"
+        : "Contato do Beneficiário";
+    }
+    return "Contato";
+  }, [tipoBeneficiario, contactIsResponsible]);
+
   // Validate single field
   const validateField = useCallback(
     (name: string, value: string): { isValid: boolean; error: string } => {
@@ -2267,23 +2286,34 @@ export function BPCLOASForm() {
       {/* Contact Section */}
       {tipoBeneficiario && (
         <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>Contato</h3>
-          {beneficiaryAge !== null && (
-            <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+          <h3 className={sectionTitleClassName}>{contactTitle}</h3>
+
+          {tipoBeneficiario === "outro" && beneficiaryAge !== null && (
+            <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-2">
               <p className="text-sm text-muted-foreground">
-                É necessário informar o{" "}
-                <span className="font-semibold text-foreground">
-                  contato do responsável legal
-                </span>
-                <br />
-                {beneficiaryAge < 18 && (
-                  <span className="ml-2 text-primary">
-                    • Será necessário informar o contato do responsável legal
-                  </span>
+                {contactIsResponsible ? (
+                  <>
+                    Como o beneficiário é{" "}
+                    <span className="font-semibold text-foreground">
+                      {beneficiaryAge < 18
+                        ? "dependente (menor de 18)"
+                        : "pessoa que necessita acompanhamento"}
+                    </span>
+                    , informe o contato do responsável legal.
+                  </>
+                ) : (
+                  <>
+                    O beneficiário é{" "}
+                    <span className="font-semibold text-foreground">
+                      maior de idade e independente
+                    </span>
+                    . Informe o contato do beneficiário.
+                  </>
                 )}
               </p>
             </div>
-          )}{" "}
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClassName}>Telefone{requiredSpan}</label>
