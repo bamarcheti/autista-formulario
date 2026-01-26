@@ -198,25 +198,6 @@ export function BPCLOASForm() {
     return beneficiaryAge < 18 || needsAccompaniment;
   }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
 
-  // Contato enviado ao webhook será do responsável?
-  const contactIsResponsible = useMemo(() => {
-    if (tipoBeneficiario !== "outro") return false; // "proprio" => contato do próprio cliente
-    if (beneficiaryAge === null) return false;
-
-    // ✅ Regra: se é dependente (<18) OU precisa de acompanhamento, contato é do responsável
-    return beneficiaryAge < 18 || needsAccompaniment;
-  }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
-
-  const contactTitle = useMemo(() => {
-    if (tipoBeneficiario === "proprio") return "Contato";
-    if (tipoBeneficiario === "outro") {
-      return contactIsResponsible
-        ? "Contato do Responsável"
-        : "Contato do Beneficiário";
-    }
-    return "Contato";
-  }, [tipoBeneficiario, contactIsResponsible]);
-
   // Validate single field
   const validateField = useCallback(
     (name: string, value: string): { isValid: boolean; error: string } => {
@@ -256,15 +237,12 @@ export function BPCLOASForm() {
         }
         case "profissao": {
           const trimmed = value.trim();
-          const isValid =
-            trimmed.length >= 3 && /^[\p{L}\p{N}\s]+$/u.test(trimmed);
+          const isValid = trimmed.length >= 3 && /^[\p{L}\p{N}\s]+$/u.test(trimmed);
           return {
             isValid,
-            error: isValid
-              ? ""
-              : trimmed.length < 3
-                ? "Digite pelo menos 3 caracteres"
-                : "Digite apenas letras, números e espaços",
+            error: isValid ? "" : trimmed.length < 3 
+              ? "Digite pelo menos 3 caracteres" 
+              : "Digite apenas letras, números e espaços",
           };
         }
         case "cpf":
@@ -1051,7 +1029,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>Profissão{requiredSpan}</label>
-
               <input
                 type="text"
                 value={proprioData.profissao}
@@ -1085,7 +1062,6 @@ export function BPCLOASForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClassName}>CPF{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={proprioData.cpf}
@@ -1343,7 +1319,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>Profissão{requiredSpan}</label>
-
               <input
                 type="text"
                 value={beneficiaryData.profissao}
@@ -1377,7 +1352,6 @@ export function BPCLOASForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClassName}>CPF{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={beneficiaryData.cpf}
@@ -1459,7 +1433,6 @@ export function BPCLOASForm() {
           <div className="space-y-4">
             <div>
               <label className={labelClassName}>CEP{requiredSpan}</label>
-
               <input
                 type="text"
                 value={addressData.cep}
@@ -1499,7 +1472,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>Logradouro{requiredSpan}</label>
-
               <input
                 type="text"
                 value={addressData.endereco}
@@ -1531,7 +1503,6 @@ export function BPCLOASForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClassName}>Número{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={addressData.numero}
@@ -1589,7 +1560,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>Bairro{requiredSpan}</label>
-
               <input
                 type="text"
                 value={addressData.bairro}
@@ -1621,7 +1591,6 @@ export function BPCLOASForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClassName}>Estado{requiredSpan}</label>
-
                 <select
                   value={addressData.estado}
                   onChange={(e) => {
@@ -1654,7 +1623,6 @@ export function BPCLOASForm() {
 
               <div>
                 <label className={labelClassName}>Cidade{requiredSpan}</label>
-
                 <select
                   value={addressData.cidade}
                   onChange={(e) => {
@@ -1854,7 +1822,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>Profissão{requiredSpan}</label>
-
               <input
                 type="text"
                 value={responsibleData.profissao}
@@ -1888,7 +1855,6 @@ export function BPCLOASForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClassName}>CPF{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={responsibleData.cpf}
@@ -1992,7 +1958,6 @@ export function BPCLOASForm() {
 
               <div>
                 <label className={labelClassName}>CEP{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={responsibleAddressData.cep}
@@ -2083,7 +2048,6 @@ export function BPCLOASForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClassName}>Número{requiredSpan}</label>
-
                   <input
                     type="text"
                     value={responsibleAddressData.numero}
@@ -2155,7 +2119,6 @@ export function BPCLOASForm() {
 
               <div>
                 <label className={labelClassName}>Bairro{requiredSpan}</label>
-
                 <input
                   type="text"
                   value={responsibleAddressData.bairro}
@@ -2193,7 +2156,6 @@ export function BPCLOASForm() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClassName}>Estado{requiredSpan}</label>
-
                   <select
                     value={responsibleAddressData.estado}
                     onChange={(e) => {
@@ -2232,7 +2194,6 @@ export function BPCLOASForm() {
 
                 <div>
                   <label className={labelClassName}>Cidade{requiredSpan}</label>
-
                   <select
                     value={responsibleAddressData.cidade}
                     onChange={(e) => {
@@ -2286,38 +2247,11 @@ export function BPCLOASForm() {
       {/* Contact Section */}
       {tipoBeneficiario && (
         <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-          <h3 className={sectionTitleClassName}>{contactTitle}</h3>
-
-          {tipoBeneficiario === "outro" && beneficiaryAge !== null && (
-            <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-2">
-              <p className="text-sm text-muted-foreground">
-                {contactIsResponsible ? (
-                  <>
-                    Como o beneficiário é{" "}
-                    <span className="font-semibold text-foreground">
-                      {beneficiaryAge < 18
-                        ? "dependente (menor de 18)"
-                        : "pessoa que necessita acompanhamento"}
-                    </span>
-                    , informe o contato do responsável legal.
-                  </>
-                ) : (
-                  <>
-                    O beneficiário é{" "}
-                    <span className="font-semibold text-foreground">
-                      maior de idade e independente
-                    </span>
-                    . Informe o contato do beneficiário.
-                  </>
-                )}
-              </p>
-            </div>
-          )}
+          <h3 className={sectionTitleClassName}>Contato</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClassName}>Telefone{requiredSpan}</label>
-
               <input
                 type="text"
                 value={contactData.telefone}
@@ -2349,7 +2283,6 @@ export function BPCLOASForm() {
 
             <div>
               <label className={labelClassName}>E-mail{requiredSpan}</label>
-
               <input
                 type="email"
                 value={contactData.email}
