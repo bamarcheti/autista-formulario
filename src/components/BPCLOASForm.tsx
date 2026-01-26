@@ -2268,7 +2268,22 @@ export function BPCLOASForm() {
       {tipoBeneficiario && (
         <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
           <h3 className={sectionTitleClassName}>Contato</h3>
-
+          {beneficiaryAge !== null && (
+            <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3">
+              <p className="text-sm text-muted-foreground">
+                É necessário informar o{" "}
+                <span className="font-semibold text-foreground">
+                  contato do responsável legal
+                </span>
+                <br />
+                {beneficiaryAge < 18 && (
+                  <span className="ml-2 text-primary">
+                    • Será necessário informar o contato do responsável legal
+                  </span>
+                )}
+              </p>
+            </div>
+          )}{" "}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClassName}>Telefone{requiredSpan}</label>
