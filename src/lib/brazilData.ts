@@ -46,6 +46,17 @@ export const BENEFICIARIO_TIPO = [
   { value: "outro", label: "Para outra pessoa (filho, dependente, etc.)" },
 ];
 
+export const PARENTESCO_OPTIONS = [
+  { value: "", label: "Selecione" },
+  { value: "Pai", label: "Pai" },
+  { value: "Mãe", label: "Mãe" },
+  { value: "Avô", label: "Avô" },
+  { value: "Avó", label: "Avó" },
+  { value: "Tutor Legal", label: "Tutor Legal" },
+  { value: "Curador", label: "Curador" },
+  { value: "Outro", label: "Outro" },
+];
+
 interface Cidade {
   nome: string;
 }
@@ -54,9 +65,9 @@ const citiesCache: Record<string, Cidade[]> = {};
 
 export async function fetchCitiesByState(uf: string): Promise<Cidade[]> {
   if (citiesCache[uf]) return citiesCache[uf];
-  
+
   const response = await fetch(
-    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`
+    `https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`,
   );
   const cities = await response.json();
   citiesCache[uf] = cities;
@@ -71,13 +82,15 @@ interface ViaCepResponse {
   erro?: boolean;
 }
 
-export async function fetchAddressByCEP(cep: string): Promise<ViaCepResponse | null> {
-  const cleanCep = cep.replace(/\D/g, '');
+export async function fetchAddressByCEP(
+  cep: string,
+): Promise<ViaCepResponse | null> {
+  const cleanCep = cep.replace(/\D/g, "");
   if (cleanCep.length !== 8) return null;
-  
+
   const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
   const data = await response.json();
-  
+
   if (data.erro) return null;
   return data;
 }

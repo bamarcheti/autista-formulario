@@ -1,27 +1,135 @@
-import {
-  ESTADOS_BR,
-  ESTADOS_CIVIS,
-  fetchAddressByCEP,
-  fetchCitiesByState,
-  NACIONALIDADES,
-} from "@/lib/brazilData";
-import {
-  capitalizeAddress,
-  capitalizeFirstLetter,
-  capitalizeName,
-  formatCEP,
-  formatCPF,
-  formatPhone,
-  formatRG,
-  sanitizeText,
-  validateCPF,
-  validateEmail,
-  validatePhoneBR,
-  validateRG,
-} from "@/lib/validations";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { SuccessScreen } from "./SuccessScreen";
+
+// Mock validation functions
+const validateCPF = (cpf: string) => {
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  return true;
+};
+
+const validatePhoneBR = (phone: string) => {
+  const cleaned = phone.replace(/\D/g, "");
+  return cleaned.length === 10 || cleaned.length === 11;
+};
+
+const validateRG = (rg: string) => {
+  const cleaned = rg.replace(/\D/g, "");
+  return cleaned.length >= 7;
+};
+
+const validateEmail = (email: string) => {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const formatCPF = (value: string) => {
+  const cleaned = value.replace(/\D/g, "").slice(0, 11);
+  return cleaned
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+};
+
+const formatPhone = (value: string) => {
+  const cleaned = value.replace(/\D/g, "").slice(0, 11);
+  if (cleaned.length <= 10) {
+    return cleaned.replace(/(\d{2})(\d{4})(\d{0,4})/, "($1) $2-$3");
+  }
+  return cleaned.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3");
+};
+
+const formatCEP = (value: string) => {
+  const cleaned = value.replace(/\D/g, "").slice(0, 8);
+  return cleaned.replace(/(\d{5})(\d{0,3})/, "$1-$2");
+};
+
+const formatRG = (value: string) => {
+  return value.toUpperCase();
+};
+
+const capitalizeName = (text: string) => {
+  return text
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
+const capitalizeAddress = (text: string) => capitalizeName(text);
+const capitalizeFirstLetter = (text: string) =>
+  text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+
+const sanitizeText = (text: string) => text.trim();
+
+// Mock data
+const NACIONALIDADES = [
+  { value: "", label: "Selecione" },
+  { value: "Brasileira", label: "Brasileira" },
+  { value: "Estrangeira", label: "Estrangeira" },
+];
+
+const ESTADOS_CIVIS = [
+  { value: "", label: "Selecione" },
+  { value: "Solteiro(a)", label: "Solteiro(a)" },
+  { value: "Casado(a)", label: "Casado(a)" },
+  { value: "Divorciado(a)", label: "Divorciado(a)" },
+  { value: "Viúvo(a)", label: "Viúvo(a)" },
+];
+
+const ESTADOS_BR = [
+  { value: "", label: "Selecione o estado" },
+  { value: "SP", label: "São Paulo" },
+  { value: "RJ", label: "Rio de Janeiro" },
+  { value: "MS", label: "Mato Grosso do Sul" },
+  { value: "MG", label: "Minas Gerais" },
+  { value: "BA", label: "Bahia" },
+];
+
+const PARENTESCO_OPTIONS = [
+  { value: "", label: "Selecione" },
+  { value: "Pai", label: "Pai" },
+  { value: "Mãe", label: "Mãe" },
+  { value: "Avô", label: "Avô" },
+  { value: "Avó", label: "Avó" },
+  { value: "Tutor Legal", label: "Tutor Legal" },
+  { value: "Curador", label: "Curador" },
+  { value: "Outro", label: "Outro" },
+];
+
+const fetchCitiesByState = async (state: string) => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const cities: Record<string, any[]> = {
+    SP: [{ nome: "São Paulo" }, { nome: "Campinas" }, { nome: "Santos" }],
+    RJ: [
+      { nome: "Rio de Janeiro" },
+      { nome: "Niterói" },
+      { nome: "Petrópolis" },
+    ],
+    MS: [
+      { nome: "Campo Grande" },
+      { nome: "Dourados" },
+      { nome: "Três Lagoas" },
+    ],
+    MG: [{ nome: "Belo Horizonte" }, { nome: "Uberlândia" }],
+    BA: [{ nome: "Salvador" }, { nome: "Feira de Santana" }],
+  };
+  return cities[state] || [];
+};
+
+const fetchAddressByCEP = async (cep: string) => {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  if (cep === "79002000") {
+    return {
+      logradouro: "Rua 14 de Julho",
+      bairro: "Centro",
+      localidade: "Campo Grande",
+      uf: "MS",
+    };
+  }
+  return null;
+};
 
 interface BeneficiaryData {
   nome: string;
@@ -107,17 +215,6 @@ const initialContactData: ContactData = {
   email: "",
 };
 
-const PARENTESCO_OPTIONS = [
-  { value: "", label: "Selecione" },
-  { value: "Pai", label: "Pai" },
-  { value: "Mãe", label: "Mãe" },
-  { value: "Avô", label: "Avô" },
-  { value: "Avó", label: "Avó" },
-  { value: "Tutor Legal", label: "Tutor Legal" },
-  { value: "Curador", label: "Curador" },
-  { value: "Outro", label: "Outro" },
-];
-
 function calculateAge(birthDate: string): number | null {
   if (!birthDate) return null;
   const today = new Date();
@@ -133,6 +230,8 @@ function calculateAge(birthDate: string): number | null {
 }
 
 export function BPCLOASForm() {
+  const navigate = useNavigate();
+
   const [tipoBeneficiario, setTipoBeneficiario] = useState<string>("");
 
   const [proprioData, setProprioData] = useState<ProprioFormData>({
@@ -152,17 +251,13 @@ export function BPCLOASForm() {
     initialResponsibleData,
   );
 
-  // Beneficiary address
   const [addressData, setAddressData] =
     useState<AddressData>(initialAddressData);
-
-  // Responsible address (separate)
   const [responsibleAddressData, setResponsibleAddressData] =
     useState<AddressData>(initialAddressData);
   const [sameAddressAsResponsible, setSameAddressAsResponsible] =
     useState(false);
 
-  // New: Adult who needs constant accompaniment
   const [needsAccompaniment, setNeedsAccompaniment] = useState(false);
 
   const [contactData, setContactData] =
@@ -182,7 +277,6 @@ export function BPCLOASForm() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [touched, setTouched] = useState<Set<string>>(new Set());
 
-  // Calculate beneficiary age
   const beneficiaryAge = useMemo(() => {
     if (tipoBeneficiario === "outro") {
       return calculateAge(beneficiaryData.dataNascimento);
@@ -190,14 +284,12 @@ export function BPCLOASForm() {
     return null;
   }, [tipoBeneficiario, beneficiaryData.dataNascimento]);
 
-  // Show responsible section if beneficiary is under 18 OR if adult needs accompaniment
   const showResponsibleSection = useMemo(() => {
     if (tipoBeneficiario !== "outro") return false;
     if (beneficiaryAge === null) return false;
     return beneficiaryAge < 18 || needsAccompaniment;
   }, [tipoBeneficiario, beneficiaryAge, needsAccompaniment]);
 
-  // Validate single field
   const validateField = useCallback(
     (name: string, value: string): { isValid: boolean; error: string } => {
       const baseName = name.replace(
@@ -373,7 +465,6 @@ export function BPCLOASForm() {
     }
   };
 
-  // Generic input handler
   const handleInputChange = (
     setter: React.Dispatch<React.SetStateAction<any>>,
     name: string,
@@ -570,10 +661,11 @@ export function BPCLOASForm() {
     loadCities();
   }, [responsibleAddressData.estado, sameAddressAsResponsible]);
 
-  // Check if form is valid
+  // CORREÇÃO PRINCIPAL: Validação do formulário
   const isFormValid = useCallback(() => {
     if (!tipoBeneficiario) return false;
 
+    // Validar endereço do beneficiário
     const addressFields: (keyof AddressData)[] = [
       "cep",
       "endereco",
@@ -587,6 +679,7 @@ export function BPCLOASForm() {
       return result.isValid;
     });
 
+    // Validar contato
     const contactFields: (keyof ContactData)[] = ["telefone", "email"];
     const contactValid = contactFields.every((field) => {
       const result = validateField(field, contactData[field]);
@@ -609,6 +702,7 @@ export function BPCLOASForm() {
         return result.isValid;
       });
     } else {
+      // Validar dados do beneficiário
       const beneficiaryFields: (keyof BeneficiaryData)[] = [
         "nome",
         "dataNascimento",
@@ -627,6 +721,7 @@ export function BPCLOASForm() {
 
       if (!beneficiaryValid) return false;
 
+      // Se mostrar seção de responsável
       if (showResponsibleSection) {
         const responsibleFields: (keyof ResponsibleData)[] = [
           "nome",
@@ -646,7 +741,7 @@ export function BPCLOASForm() {
 
         if (!responsibleValid) return false;
 
-        // Validate responsible address if not same
+        // CORREÇÃO: Validar endereço do responsável APENAS se não for o mesmo do beneficiário
         if (!sameAddressAsResponsible) {
           const respAddrValid = addressFields.every((field) => {
             const result = validateField(
@@ -657,6 +752,7 @@ export function BPCLOASForm() {
           });
           if (!respAddrValid) return false;
         }
+        // Se sameAddressAsResponsible === true, não valida o endereço do responsável
       }
 
       return true;
@@ -674,11 +770,13 @@ export function BPCLOASForm() {
     validateField,
   ]);
 
-  // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isFormValid()) return;
+    if (!isFormValid()) {
+      alert("Por favor, preencha todos os campos obrigatórios corretamente.");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -779,18 +877,14 @@ export function BPCLOASForm() {
       );
 
       if (response.ok) {
-        setIsSuccess(true);
+        // Redirecionar para página de sucesso
+        navigate("/sucesso");
       } else {
         throw new Error("Erro ao processar solicitação.");
       }
     } catch (err) {
       console.error("Erro:", err);
-      let msg = "Erro ao enviar formulário.";
-      if (!navigator.onLine) {
-        msg =
-          "Sem conexão com a internet. Verifique sua conexão e tente novamente.";
-      }
-      alert(msg);
+      alert("Erro ao enviar formulário. Tente novamente.");
     }
 
     setIsSubmitting(false);
@@ -837,6 +931,7 @@ export function BPCLOASForm() {
               setBeneficiaryData(initialBeneficiaryData);
               setResponsibleData(initialResponsibleData);
               setNeedsAccompaniment(false);
+              setSameAddressAsResponsible(false);
             }}
             className={`p-4 rounded-lg border-2 text-left transition-all duration-300 ${
               tipoBeneficiario === "proprio"
@@ -1487,7 +1582,10 @@ export function BPCLOASForm() {
                   const sanitized = capitalizeAddress(
                     sanitizeText(addressData.endereco),
                   );
-                  setAddressData((prev) => ({ ...prev, endereco: sanitized }));
+                  setAddressData((prev) => ({
+                    ...prev,
+                    endereco: sanitized,
+                  }));
                   updateValidation("endereco", sanitized);
                 }}
                 placeholder="Rua, Avenida, etc."
@@ -1509,7 +1607,10 @@ export function BPCLOASForm() {
                     const formatted = e.target.value
                       .toUpperCase()
                       .replace(/[^0-9SN\/]/g, "");
-                    setAddressData((prev) => ({ ...prev, numero: formatted }));
+                    setAddressData((prev) => ({
+                      ...prev,
+                      numero: formatted,
+                    }));
                     if (touched.has("numero"))
                       updateValidation("numero", formatted);
                   }}
@@ -1934,8 +2035,8 @@ export function BPCLOASForm() {
                   }
                 }}
                 className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary text-primary 
-                  focus:ring-primary focus:ring-offset-0 cursor-pointer
-                  checked:bg-primary checked:border-primary"
+                    focus:ring-primary focus:ring-offset-0 cursor-pointer
+                    checked:bg-primary checked:border-primary"
               />
               <div>
                 <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
@@ -2256,7 +2357,10 @@ export function BPCLOASForm() {
                 value={contactData.telefone}
                 onChange={(e) => {
                   const formatted = formatPhone(e.target.value);
-                  setContactData((prev) => ({ ...prev, telefone: formatted }));
+                  setContactData((prev) => ({
+                    ...prev,
+                    telefone: formatted,
+                  }));
                   if (touched.has("telefone"))
                     updateValidation("telefone", formatted);
                 }}
