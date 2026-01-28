@@ -7,6 +7,7 @@ import {
   formatPhone,
   formatCEP,
   formatRG,
+  formatAddressNumber,
   capitalizeName,
   capitalizeAddress,
   capitalizeFirstLetter,
@@ -32,7 +33,7 @@ export function formatFieldValue(fieldName: string, value: string): string {
     case "rg":
       return formatRG(value);
     case "numero":
-      return value.toUpperCase().replace(/[^0-9SN\/]/g, "");
+      return formatAddressNumber(value);
     default:
       return value;
   }

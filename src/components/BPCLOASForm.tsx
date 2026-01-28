@@ -30,8 +30,7 @@ import { fetchAddressByCEP, fetchCitiesByState } from "@/services/addressService
 
 // Utilities
 import { formatFieldValue, sanitizeFieldValue } from "@/lib/formFormatters";
-import { calculateAge, needsLegalGuardian } from "@/lib/ageCalculator";
-import { sanitizeText, capitalizeAddress } from "@/lib/validations";
+import { sanitizeText, capitalizeAddress, calculateAge, needsLegalGuardian } from "@/lib/validations";
 
 // Components
 import {

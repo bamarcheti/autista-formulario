@@ -9,6 +9,14 @@ import {
   validatePhoneBR,
   validateRG,
   validateEmail,
+  validateFullName,
+  validateBirthDate,
+  validateProfession,
+  validateCEP,
+  validateAddressField,
+  validateAddressNumber,
+  validateComplement,
+  validateRequiredSelect,
 } from "@/lib/validations";
 
 /**
@@ -31,49 +39,16 @@ export function useFormValidation() {
 
       switch (baseName) {
         case "tipoBeneficiario":
-          return {
-            isValid: value !== "",
-            error: value === "" ? "Selecione para quem é o benefício" : "",
-          };
+          return validateRequiredSelect(value, "para quem é o benefício");
 
-        case "nome": {
-          const words = value.split(/\s+/).filter(Boolean);
-          const isValid =
-            words.length >= 2 && words.every((w) => /^[A-Za-zÀ-ÿ]+$/.test(w));
-          return {
-            isValid,
-            error: isValid
-              ? ""
-              : "Digite nome e sobrenome completos (mínimo 2 palavras, apenas letras)",
-          };
-        }
+        case "nome":
+          return validateFullName(value);
 
-        case "dataNascimento": {
-          if (!value) {
-            return { isValid: false, error: "Informe a data de nascimento" };
-          }
-          const date = new Date(value);
-          const today = new Date();
-          const isValid = !isNaN(date.getTime()) && date <= today;
-          return {
-            isValid,
-            error: isValid ? "" : "Data de nascimento inválida",
-          };
-        }
+        case "dataNascimento":
+          return validateBirthDate(value);
 
-        case "profissao": {
-          const trimmed = value.trim();
-          const isValid =
-            trimmed.length >= 3 && /^[\p{L}\p{N}\s]+$/u.test(trimmed);
-          return {
-            isValid,
-            error: isValid
-              ? ""
-              : trimmed.length < 3
-                ? "Digite pelo menos 3 caracteres"
-                : "Digite apenas letras, números e espaços",
-          };
-        }
+        case "profissao":
+          return validateProfession(value);
 
         case "cpf":
           return {
@@ -90,45 +65,20 @@ export function useFormValidation() {
           };
 
         case "parentesco":
-          return {
-            isValid: value.length > 0,
-            error: value.length === 0 ? "Selecione o grau de parentesco" : "",
-          };
+          return validateRequiredSelect(value, "o grau de parentesco");
 
         case "cep":
-          return {
-            isValid: value.replace(/\D/g, "").length === 8,
-            error:
-              value.replace(/\D/g, "").length !== 8
-                ? "CEP inválido ou não encontrado"
-                : "",
-          };
+          return validateCEP(value);
 
         case "endereco":
         case "bairro":
-          return {
-            isValid: value.length >= 3 && /^[A-Za-zÀ-ÿ0-9\s]+$/.test(value),
-            error:
-              value.length < 3
-                ? "Digite pelo menos 3 caracteres"
-                : "Digite um endereço válido",
-          };
+          return validateAddressField(value);
 
-        case "numero": {
-          const n = value.toUpperCase().replace(/\s/g, "");
-          const isValid = /^[0-9]+$/.test(n) || n === "S/N" || n === "SN";
-          return {
-            isValid,
-            error: isValid ? "" : "Digite apenas números ou S/N",
-          };
-        }
+        case "numero":
+          return validateAddressNumber(value);
 
         case "complemento":
-          return {
-            isValid:
-              value.length === 0 || /^[A-Za-zÀ-ÿ0-9\s,.\-\/]+$/.test(value),
-            error: "",
-          };
+          return validateComplement(value);
 
         case "telefone":
           return {
@@ -148,10 +98,7 @@ export function useFormValidation() {
         case "estadoCivil":
         case "estado":
         case "cidade":
-          return {
-            isValid: value.length > 0,
-            error: value.length === 0 ? "Selecione uma opção" : "",
-          };
+          return validateRequiredSelect(value);
 
         default:
           return { isValid: true, error: "" };
