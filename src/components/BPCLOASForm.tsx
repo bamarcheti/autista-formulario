@@ -8,38 +8,46 @@ import { useNavigate } from "react-router-dom";
 
 // Types
 import type {
-  BeneficiaryData,
-  ResponsibleData,
   AddressData,
-  ContactData,
+  BeneficiaryData,
   BeneficiaryType,
+  ContactData,
+  ResponsibleData,
   SelectOption,
 } from "@/types/form";
 import {
-  INITIAL_BENEFICIARY_DATA,
-  INITIAL_RESPONSIBLE_DATA,
   INITIAL_ADDRESS_DATA,
+  INITIAL_BENEFICIARY_DATA,
   INITIAL_CONTACT_DATA,
+  INITIAL_RESPONSIBLE_DATA,
 } from "@/types/form";
 
 // Hooks
 import { useFormValidation } from "@/hooks/useFormValidation";
 
 // Services
-import { fetchAddressByCEP, fetchCitiesByState } from "@/services/addressService";
+import {
+  fetchAddressByCEP,
+  fetchCitiesByState,
+} from "@/services/addressService";
 
 // Utilities
 import { formatFieldValue, sanitizeFieldValue } from "@/lib/formFormatters";
-import { sanitizeText, capitalizeAddress, calculateAge, needsLegalGuardian } from "@/lib/validations";
+import {
+  calculateAge,
+  capitalizeAddress,
+  needsLegalGuardian,
+  sanitizeText,
+} from "@/lib/validations";
 
 // Components
 import {
+  AddressSection,
+  AgeInfoBox,
+  BeneficiaryTypeSelector,
+  ContactSection,
   PersonalDataSection,
   ResponsibleSection,
-  AddressSection,
-  ContactSection,
-  BeneficiaryTypeSelector,
-  AgeInfoBox,
   SameAddressCheckbox,
 } from "@/components/form";
 
@@ -54,25 +62,36 @@ export function BPCLOASForm() {
   // Form State
   // ==========================================
   const [tipoBeneficiario, setTipoBeneficiario] = useState<BeneficiaryType>("");
-  const [beneficiaryData, setBeneficiaryData] = useState<BeneficiaryData>(INITIAL_BENEFICIARY_DATA);
-  const [responsibleData, setResponsibleData] = useState<ResponsibleData>(INITIAL_RESPONSIBLE_DATA);
-  const [addressData, setAddressData] = useState<AddressData>(INITIAL_ADDRESS_DATA);
-  const [responsibleAddressData, setResponsibleAddressData] = useState<AddressData>(INITIAL_ADDRESS_DATA);
-  const [contactData, setContactData] = useState<ContactData>(INITIAL_CONTACT_DATA);
-  
-  const [sameAddressAsResponsible, setSameAddressAsResponsible] = useState(false);
+  const [beneficiaryData, setBeneficiaryData] = useState<BeneficiaryData>(
+    INITIAL_BENEFICIARY_DATA,
+  );
+  const [responsibleData, setResponsibleData] = useState<ResponsibleData>(
+    INITIAL_RESPONSIBLE_DATA,
+  );
+  const [addressData, setAddressData] =
+    useState<AddressData>(INITIAL_ADDRESS_DATA);
+  const [responsibleAddressData, setResponsibleAddressData] =
+    useState<AddressData>(INITIAL_ADDRESS_DATA);
+  const [contactData, setContactData] =
+    useState<ContactData>(INITIAL_CONTACT_DATA);
+
+  const [sameAddressAsResponsible, setSameAddressAsResponsible] =
+    useState(false);
   const [needsAccompaniment, setNeedsAccompaniment] = useState(false);
-  
+
   // Loading states
   const [loadingCep, setLoadingCep] = useState(false);
   const [loadingResponsibleCep, setLoadingResponsibleCep] = useState(false);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingResponsibleCities, setLoadingResponsibleCities] = useState(false);
+  const [loadingResponsibleCities, setLoadingResponsibleCities] =
+    useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // City options
   const [cities, setCities] = useState<SelectOption[]>([]);
-  const [responsibleCities, setResponsibleCities] = useState<SelectOption[]>([]);
+  const [responsibleCities, setResponsibleCities] = useState<SelectOption[]>(
+    [],
+  );
 
   // Validation hook
   const {
@@ -88,7 +107,7 @@ export function BPCLOASForm() {
   // ==========================================
   // Computed Values
   // ==========================================
-  
+
   const beneficiaryAge = useMemo(() => {
     if (tipoBeneficiario === "outro") {
       return calculateAge(beneficiaryData.dataNascimento);
@@ -98,7 +117,10 @@ export function BPCLOASForm() {
 
   const showResponsibleSection = useMemo(() => {
     if (tipoBeneficiario !== "outro") return false;
-    return needsLegalGuardian(beneficiaryData.dataNascimento, needsAccompaniment);
+    return needsLegalGuardian(
+      beneficiaryData.dataNascimento,
+      needsAccompaniment,
+    );
   }, [tipoBeneficiario, beneficiaryData.dataNascimento, needsAccompaniment]);
 
   // ==========================================
@@ -125,46 +147,64 @@ export function BPCLOASForm() {
         updateValidation(prefixedName, sanitized);
       },
     };
-  }, [tipoBeneficiario, touched, updateValidation, markAsTouched, beneficiaryData]);
+  }, [
+    tipoBeneficiario,
+    touched,
+    updateValidation,
+    markAsTouched,
+    beneficiaryData,
+  ]);
 
   // Responsible handlers
-  const responsibleHandlers = useMemo(() => ({
-    onFieldChange: (field: keyof ResponsibleData, value: string) => {
-      const formattedValue = formatFieldValue(field, value);
-      setResponsibleData((prev) => ({ ...prev, [field]: formattedValue }));
-      const prefixedName = `responsavel_${field}`;
-      if (touched.has(prefixedName)) {
-        updateValidation(prefixedName, formattedValue);
-      }
-    },
-    onFieldBlur: (field: keyof ResponsibleData) => {
-      const prefixedName = `responsavel_${field}`;
-      markAsTouched(prefixedName);
-      const sanitized = sanitizeFieldValue(field, responsibleData[field]);
-      setResponsibleData((prev) => ({ ...prev, [field]: sanitized }));
-      updateValidation(prefixedName, sanitized);
-    },
-  }), [touched, updateValidation, markAsTouched, responsibleData]);
-
+  const responsibleHandlers = useMemo(
+    () => ({
+      onFieldChange: (field: keyof ResponsibleData, value: string) => {
+        const formattedValue = formatFieldValue(field, value);
+        setResponsibleData((prev) => ({ ...prev, [field]: formattedValue }));
+        const prefixedName = `responsavel_${field}`;
+        if (touched.has(prefixedName)) {
+          updateValidation(prefixedName, formattedValue);
+        }
+      },
+      onFieldBlur: (field: keyof ResponsibleData) => {
+        const prefixedName = `responsavel_${field}`;
+        markAsTouched(prefixedName);
+        const sanitized = sanitizeFieldValue(field, responsibleData[field]);
+        setResponsibleData((prev) => ({ ...prev, [field]: sanitized }));
+        updateValidation(prefixedName, sanitized);
+      },
+    }),
+    [touched, updateValidation, markAsTouched, responsibleData],
+  );
 
   // Contact handlers
-  const contactHandlers = useMemo(() => ({
-    onFieldChange: (field: keyof ContactData, value: string) => {
-      const formattedValue = formatFieldValue(field, value);
-      setContactData((prev) => ({ ...prev, [field]: formattedValue }));
-      if (touched.has(field)) {
-        updateValidation(field, formattedValue);
-      }
-    },
-    onFieldBlur: (field: keyof ContactData) => {
-      markAsTouched(field);
-      const sanitized = sanitizeFieldValue(field, contactData[field]);
-      setContactData((prev) => ({ ...prev, [field]: sanitized }));
-      updateValidation(field, sanitized);
-    },
-    getFieldState: (field: string) => getFieldState(field),
-    getError: (field: string) => getError(field),
-  }), [touched, updateValidation, markAsTouched, getFieldState, getError, contactData]);
+  const contactHandlers = useMemo(
+    () => ({
+      onFieldChange: (field: keyof ContactData, value: string) => {
+        const formattedValue = formatFieldValue(field, value);
+        setContactData((prev) => ({ ...prev, [field]: formattedValue }));
+        if (touched.has(field)) {
+          updateValidation(field, formattedValue);
+        }
+      },
+      onFieldBlur: (field: keyof ContactData) => {
+        markAsTouched(field);
+        const sanitized = sanitizeFieldValue(field, contactData[field]);
+        setContactData((prev) => ({ ...prev, [field]: sanitized }));
+        updateValidation(field, sanitized);
+      },
+      getFieldState: (field: string) => getFieldState(field),
+      getError: (field: string) => getError(field),
+    }),
+    [
+      touched,
+      updateValidation,
+      markAsTouched,
+      getFieldState,
+      getError,
+      contactData,
+    ],
+  );
 
   // ==========================================
   // Address Handlers
@@ -175,7 +215,7 @@ export function BPCLOASForm() {
       data: AddressData,
       setter: React.Dispatch<React.SetStateAction<AddressData>>,
       setCitiesList: React.Dispatch<React.SetStateAction<SelectOption[]>>,
-      prefix: string = ""
+      prefix: string = "",
     ) => ({
       onFieldChange: (field: keyof AddressData, value: string) => {
         const formattedValue = formatFieldValue(field, value);
@@ -197,29 +237,40 @@ export function BPCLOASForm() {
         const fieldName = prefix ? `${prefix}_estado` : "estado";
         markAsTouched(fieldName);
         updateValidation(fieldName, value);
-        
+
         if (value) {
-          const setLoading = prefix === "resp_addr" ? setLoadingResponsibleCities : setLoadingCities;
+          const setLoading =
+            prefix === "resp_addr"
+              ? setLoadingResponsibleCities
+              : setLoadingCities;
           setLoading(true);
           const citiesData = await fetchCitiesByState(value);
-          setCitiesList(citiesData.map((c) => ({ value: c.nome, label: c.nome })));
+          setCitiesList(
+            citiesData.map((c) => ({ value: c.nome, label: c.nome })),
+          );
           setLoading(false);
         }
       },
       getFieldState: (field: string) => getFieldState(field),
       getError: (field: string) => getError(field),
     }),
-    [touched, updateValidation, markAsTouched, getFieldState, getError]
+    [touched, updateValidation, markAsTouched, getFieldState, getError],
   );
 
   const addressHandlers = useMemo(
     () => createAddressHandlers(addressData, setAddressData, setCities),
-    [createAddressHandlers, addressData]
+    [createAddressHandlers, addressData],
   );
 
   const responsibleAddressHandlers = useMemo(
-    () => createAddressHandlers(responsibleAddressData, setResponsibleAddressData, setResponsibleCities, "resp_addr"),
-    [createAddressHandlers, responsibleAddressData]
+    () =>
+      createAddressHandlers(
+        responsibleAddressData,
+        setResponsibleAddressData,
+        setResponsibleCities,
+        "resp_addr",
+      ),
+    [createAddressHandlers, responsibleAddressData],
   );
 
   // ==========================================
@@ -237,7 +288,8 @@ export function BPCLOASForm() {
         const data = await fetchAddressByCEP(cep);
         if (data) {
           const updates: Partial<AddressData> = {};
-          if (data.logradouro) updates.endereco = capitalizeAddress(data.logradouro);
+          if (data.logradouro)
+            updates.endereco = capitalizeAddress(data.logradouro);
           if (data.bairro) updates.bairro = capitalizeAddress(data.bairro);
           if (data.uf) updates.estado = data.uf;
 
@@ -246,13 +298,16 @@ export function BPCLOASForm() {
           if (data.uf) {
             setLoadingCities(true);
             const citiesData = await fetchCitiesByState(data.uf);
-            const cityOptions = citiesData.map((c) => ({ value: c.nome, label: c.nome }));
+            const cityOptions = citiesData.map((c) => ({
+              value: c.nome,
+              label: c.nome,
+            }));
             setCities(cityOptions);
             setLoadingCities(false);
 
             if (data.localidade) {
               const match = cityOptions.find(
-                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase()
+                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase(),
               );
               if (match) {
                 setAddressData((prev) => ({ ...prev, cidade: match.value }));
@@ -281,7 +336,8 @@ export function BPCLOASForm() {
         const data = await fetchAddressByCEP(cep);
         if (data) {
           const updates: Partial<AddressData> = {};
-          if (data.logradouro) updates.endereco = capitalizeAddress(data.logradouro);
+          if (data.logradouro)
+            updates.endereco = capitalizeAddress(data.logradouro);
           if (data.bairro) updates.bairro = capitalizeAddress(data.bairro);
           if (data.uf) updates.estado = data.uf;
 
@@ -290,16 +346,22 @@ export function BPCLOASForm() {
           if (data.uf) {
             setLoadingResponsibleCities(true);
             const citiesData = await fetchCitiesByState(data.uf);
-            const cityOptions = citiesData.map((c) => ({ value: c.nome, label: c.nome }));
+            const cityOptions = citiesData.map((c) => ({
+              value: c.nome,
+              label: c.nome,
+            }));
             setResponsibleCities(cityOptions);
             setLoadingResponsibleCities(false);
 
             if (data.localidade) {
               const match = cityOptions.find(
-                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase()
+                (c) => c.value.toLowerCase() === data.localidade?.toLowerCase(),
               );
               if (match) {
-                setResponsibleAddressData((prev) => ({ ...prev, cidade: match.value }));
+                setResponsibleAddressData((prev) => ({
+                  ...prev,
+                  cidade: match.value,
+                }));
               }
             }
           }
@@ -320,39 +382,74 @@ export function BPCLOASForm() {
   const isFormValid = useCallback(() => {
     if (!tipoBeneficiario) return false;
 
-    const addressFields: (keyof AddressData)[] = ["cep", "endereco", "numero", "bairro", "estado", "cidade"];
+    const addressFields: (keyof AddressData)[] = [
+      "cep",
+      "endereco",
+      "numero",
+      "bairro",
+      "estado",
+      "cidade",
+    ];
     const contactFields: (keyof ContactData)[] = ["telefone", "email"];
 
-    const addressValid = addressFields.every((f) => isFieldValid(f, addressData[f]));
-    const contactValid = contactFields.every((f) => isFieldValid(f, contactData[f]));
+    const addressValid = addressFields.every((f) =>
+      isFieldValid(f, addressData[f]),
+    );
+    const contactValid = contactFields.every((f) =>
+      isFieldValid(f, contactData[f]),
+    );
 
     if (!addressValid || !contactValid) return false;
 
-    const beneficiaryFields: (keyof BeneficiaryData)[] = ["nome", "dataNascimento", "nacionalidade", "estadoCivil", "profissao", "cpf"];
+    const beneficiaryFields: (keyof BeneficiaryData)[] = [
+      "nome",
+      "dataNascimento",
+      "nacionalidade",
+      "estadoCivil",
+      "profissao",
+      "cpf",
+    ];
     const prefix = tipoBeneficiario === "proprio" ? "proprio" : "beneficiario";
-    const beneficiaryValid = beneficiaryFields.every((f) => 
-      isFieldValid(`${prefix}_${f}`, beneficiaryData[f])
+    const beneficiaryValid = beneficiaryFields.every((f) =>
+      isFieldValid(`${prefix}_${f}`, beneficiaryData[f]),
     );
 
     if (!beneficiaryValid) return false;
 
     if (showResponsibleSection) {
-      const responsibleFields: (keyof ResponsibleData)[] = ["nome", "nacionalidade", "estadoCivil", "profissao", "cpf", "parentesco"];
-      const responsibleValid = responsibleFields.every((f) => 
-        isFieldValid(`responsavel_${f}`, responsibleData[f])
+      const responsibleFields: (keyof ResponsibleData)[] = [
+        "nome",
+        "nacionalidade",
+        "estadoCivil",
+        "profissao",
+        "cpf",
+        "parentesco",
+      ];
+      const responsibleValid = responsibleFields.every((f) =>
+        isFieldValid(`responsavel_${f}`, responsibleData[f]),
       );
       if (!responsibleValid) return false;
 
       if (!sameAddressAsResponsible) {
-        const respAddrValid = addressFields.every((f) => 
-          isFieldValid(`resp_addr_${f}`, responsibleAddressData[f])
+        const respAddrValid = addressFields.every((f) =>
+          isFieldValid(`resp_addr_${f}`, responsibleAddressData[f]),
         );
         if (!respAddrValid) return false;
       }
     }
 
     return true;
-  }, [tipoBeneficiario, beneficiaryData, responsibleData, addressData, responsibleAddressData, contactData, showResponsibleSection, sameAddressAsResponsible, isFieldValid]);
+  }, [
+    tipoBeneficiario,
+    beneficiaryData,
+    responsibleData,
+    addressData,
+    responsibleAddressData,
+    contactData,
+    showResponsibleSection,
+    sameAddressAsResponsible,
+    isFieldValid,
+  ]);
 
   // ==========================================
   // Form Submission
@@ -416,7 +513,9 @@ export function BPCLOASForm() {
       };
 
       if (showResponsibleSection) {
-        const respAddr = sameAddressAsResponsible ? addressData : responsibleAddressData;
+        const respAddr = sameAddressAsResponsible
+          ? addressData
+          : responsibleAddressData;
         payload.responsavel = {
           parentesco: responsibleData.parentesco,
           nome: sanitizeText(responsibleData.nome),
@@ -446,7 +545,7 @@ export function BPCLOASForm() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-        }
+        },
       );
 
       if (response.ok) {
@@ -491,7 +590,11 @@ export function BPCLOASForm() {
       {/* Dados do beneficiário */}
       {tipoBeneficiario && (
         <PersonalDataSection
-          title={tipoBeneficiario === "proprio" ? "Seus Dados" : "Dados do Beneficiário"}
+          title={
+            tipoBeneficiario === "proprio"
+              ? "Seus Dados"
+              : "Dados do Beneficiário"
+          }
           data={beneficiaryData}
           prefix={prefix}
           onFieldChange={beneficiaryHandlers.onFieldChange}
@@ -513,7 +616,11 @@ export function BPCLOASForm() {
       {/* Endereço do beneficiário */}
       {tipoBeneficiario && (
         <AddressSection
-          title={tipoBeneficiario === "proprio" ? "Endereço" : "Endereço do Beneficiário"}
+          title={
+            tipoBeneficiario === "proprio"
+              ? "Endereço"
+              : "Endereço do Beneficiário"
+          }
           data={addressData}
           cities={cities}
           loadingCep={loadingCep}
