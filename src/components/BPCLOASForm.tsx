@@ -109,14 +109,14 @@ export function BPCLOASForm() {
   // ==========================================
 
   const beneficiaryAge = useMemo(() => {
-    if (tipoBeneficiario === "outro") {
+    if (tipoBeneficiario && beneficiaryData.dataNascimento) {
       return calculateAge(beneficiaryData.dataNascimento);
     }
     return null;
   }, [tipoBeneficiario, beneficiaryData.dataNascimento]);
 
   const showResponsibleSection = useMemo(() => {
-    if (tipoBeneficiario !== "outro") return false;
+    if (!tipoBeneficiario) return false;
     return needsLegalGuardian(
       beneficiaryData.dataNascimento,
       needsAccompaniment,
@@ -602,7 +602,7 @@ export function BPCLOASForm() {
           getFieldState={(field) => getFieldState(`${prefix}_${field}`)}
           getError={(field) => getError(`${prefix}_${field}`)}
           birthDateInfo={
-            tipoBeneficiario === "outro" && beneficiaryAge !== null ? (
+            beneficiaryAge !== null ? (
               <AgeInfoBox
                 age={beneficiaryAge}
                 needsAccompaniment={needsAccompaniment}
@@ -645,7 +645,9 @@ export function BPCLOASForm() {
             getError={(field) => getError(`responsavel_${field}`)}
             description={
               beneficiaryAge !== null && beneficiaryAge < 18
-                ? "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
+                ? tipoBeneficiario === "proprio"
+                  ? "Como você é menor de 18 anos, precisamos dos dados do seu responsável legal."
+                  : "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
                 : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."
             }
           />
