@@ -7,18 +7,20 @@ const Index = () => {
         <div className="bg-card rounded-2xl shadow-2xl p-8 sm:p-10 animate-slide-up">
           <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-2">
-              Cadastro BPC/LOAS
+              Cadastro
             </h1>
             <p className="text-muted-foreground text-sm">
-              Benefício para pessoa autista - Preencha corretamente para que possamos te representar com excelência.
+              Preencha <strong>corretamente</strong> para que possamos te
+              representar com excelência.
             </p>
           </div>
-          
+
           <BPCLOASForm />
         </div>
-        
+
         <p className="text-center text-muted-foreground/60 text-xs mt-6">
-          Fiorin Advocacia © {new Date().getFullYear()} - Todos os direitos reservados
+          Fiorin Advocacia © {new Date().getFullYear()} - Todos os direitos
+          reservados
         </p>
       </div>
     </div>
