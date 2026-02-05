@@ -13,16 +13,30 @@ export function AgeInfoBox({
   needsAccompaniment,
   onAccompanimentChange,
 }: AgeInfoBoxProps) {
+  const getAgeMessage = () => {
+    if (age < 13) {
+      return (
+        <span className="ml-2 text-primary">
+          • Será necessário informar o responsável legal
+        </span>
+      );
+    }
+    if (age >= 13 && age < 18) {
+      return (
+        <span className="ml-2 text-muted-foreground">
+          • Menor de idade, mas pode responder por si mesmo
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="p-4 rounded-lg bg-muted/50 border border-border space-y-3 mt-4">
       <p className="text-sm text-muted-foreground">
         Idade do beneficiário:{" "}
         <span className="font-semibold text-foreground">{age} anos</span>
-        {age < 18 && (
-          <span className="ml-2 text-primary">
-            • Será necessário informar o responsável legal
-          </span>
-        )}
+        {getAgeMessage()}
       </p>
 
       {/* Checkbox de acompanhamento para maiores de 18 */}
