@@ -14,14 +14,14 @@ export function AgeInfoBox({
   onAccompanimentChange,
 }: AgeInfoBoxProps) {
   const getAgeMessage = () => {
-    if (age < 13) {
+    if (age <= 13) {
       return (
         <span className="ml-2 text-primary">
           • Será necessário informar o responsável legal
         </span>
       );
     }
-    if (age >= 13 && age < 18) {
+    if (age >= 14 && age < 18) {
       return (
         <span className="ml-2 text-muted-foreground">
           • Menor de idade, mas pode responder por si mesmo
