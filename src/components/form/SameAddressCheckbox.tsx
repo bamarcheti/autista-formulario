@@ -2,6 +2,8 @@
 // Same Address Checkbox - Toggle for address sharing
 // ==========================================
 
+import { Home } from "lucide-react";
+
 interface SameAddressCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -12,22 +14,50 @@ export function SameAddressCheckbox({
   onChange,
 }: SameAddressCheckboxProps) {
   return (
-    <div className="pt-4 border-t border-border">
+    <div className="p-4 rounded-xl border-2 border-border bg-muted/30 hover:bg-muted/50 transition-colors">
       <label className="flex items-start gap-3 cursor-pointer group">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="mt-1 w-5 h-5 rounded border-2 border-border bg-secondary text-primary 
-            focus:ring-primary focus:ring-offset-0 cursor-pointer
-            checked:bg-primary checked:border-primary"
-        />
-        <div>
-          <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-            O endereço do responsável é o mesmo do beneficiário
-          </span>
-          <p className="text-xs text-muted-foreground mt-1">
-            Marque esta opção se o responsável reside no mesmo endereço
+        <div className="relative mt-0.5">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => onChange(e.target.checked)}
+            className="sr-only peer"
+          />
+          <div
+            className={`w-6 h-6 rounded-md border-2 transition-all duration-200 flex items-center justify-center
+              ${
+                checked
+                  ? "bg-primary border-primary"
+                  : "bg-secondary border-border group-hover:border-primary/50"
+              }`}
+          >
+            {checked && (
+              <svg
+                className="w-4 h-4 text-primary-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={3}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            )}
+          </div>
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <Home className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+              O endereço do responsável é o mesmo do beneficiário
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+            Marque esta opção se o responsável legal reside no mesmo endereço do
+            beneficiário. O endereço será copiado automaticamente.
           </p>
         </div>
       </label>

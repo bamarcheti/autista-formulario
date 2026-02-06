@@ -24,6 +24,7 @@ import {
 
 // Hooks
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { useBeneficiaryAgeRules } from "@/hooks/useBeneficiaryAgeRules";
 
 // Services
 import {
@@ -33,12 +34,7 @@ import {
 
 // Utilities
 import { formatFieldValue, sanitizeFieldValue } from "@/lib/formFormatters";
-import {
-  calculateAge,
-  capitalizeAddress,
-  needsLegalGuardian,
-  sanitizeText,
-} from "@/lib/validations";
+import { capitalizeAddress, sanitizeText } from "@/lib/validations";
 
 // Components
 import {
@@ -77,7 +73,9 @@ export function BPCLOASForm() {
 
   const [sameAddressAsResponsible, setSameAddressAsResponsible] =
     useState(false);
-  const [needsAccompaniment, setNeedsAccompaniment] = useState(false);
+  
+  // Novo estado: beneficiário maior de idade com representante legal
+  const [hasLegalRepresentative, setHasLegalRepresentative] = useState(false);
 
   // Loading states
   const [loadingCep, setLoadingCep] = useState(false);
@@ -105,23 +103,13 @@ export function BPCLOASForm() {
   } = useFormValidation();
 
   // ==========================================
-  // Computed Values
+  // Age Rules Hook (centraliza regras de idade)
   // ==========================================
-
-  const beneficiaryAge = useMemo(() => {
-    if (tipoBeneficiario && beneficiaryData.dataNascimento) {
-      return calculateAge(beneficiaryData.dataNascimento);
-    }
-    return null;
-  }, [tipoBeneficiario, beneficiaryData.dataNascimento]);
-
-  const showResponsibleSection = useMemo(() => {
-    if (!tipoBeneficiario) return false;
-    return needsLegalGuardian(
-      beneficiaryData.dataNascimento,
-      needsAccompaniment,
-    );
-  }, [tipoBeneficiario, beneficiaryData.dataNascimento, needsAccompaniment]);
+  const ageRules = useBeneficiaryAgeRules({
+    birthDate: beneficiaryData.dataNascimento,
+    hasLegalRepresentative,
+    beneficiaryType: tipoBeneficiario,
+  });
 
   // ==========================================
   // Field Handlers
@@ -416,7 +404,8 @@ export function BPCLOASForm() {
 
     if (!beneficiaryValid) return false;
 
-    if (showResponsibleSection) {
+    // Usar regras centralizadas para validar responsável
+    if (ageRules.showResponsibleSection) {
       const responsibleFields: (keyof ResponsibleData)[] = [
         "nome",
         "nacionalidade",
@@ -446,7 +435,7 @@ export function BPCLOASForm() {
     addressData,
     responsibleAddressData,
     contactData,
-    showResponsibleSection,
+    ageRules.showResponsibleSection,
     sameAddressAsResponsible,
     isFieldValid,
   ]);
@@ -464,6 +453,11 @@ export function BPCLOASForm() {
     }
 
     setIsSubmitting(true);
+
+    // Resolver endereço do responsável (copia se checkbox marcado)
+    const finalResponsibleAddress = sameAddressAsResponsible
+      ? addressData
+      : responsibleAddressData;
 
     const payload: Record<string, unknown> = {
       tipo_caso: "bpc_loas_autismo",
@@ -494,13 +488,13 @@ export function BPCLOASForm() {
       payload.beneficiario = {
         nome: sanitizeText(beneficiaryData.nome),
         data_nascimento: beneficiaryData.dataNascimento,
-        idade: beneficiaryAge,
+        idade: ageRules.age,
         nacionalidade: beneficiaryData.nacionalidade,
         estadoCivil: beneficiaryData.estadoCivil,
         profissao: sanitizeText(beneficiaryData.profissao),
         cpf: beneficiaryData.cpf.replace(/\D/g, ""),
         rg: beneficiaryData.rg.trim(),
-        necessita_acompanhamento: needsAccompaniment,
+        possui_representante_legal: hasLegalRepresentative,
         endereco: {
           cep: addressData.cep.replace(/\D/g, ""),
           logradouro: sanitizeText(addressData.endereco),
@@ -512,10 +506,7 @@ export function BPCLOASForm() {
         },
       };
 
-      if (showResponsibleSection) {
-        const respAddr = sameAddressAsResponsible
-          ? addressData
-          : responsibleAddressData;
+      if (ageRules.showResponsibleSection) {
         payload.responsavel = {
           parentesco: responsibleData.parentesco,
           nome: sanitizeText(responsibleData.nome),
@@ -526,13 +517,13 @@ export function BPCLOASForm() {
           rg: responsibleData.rg.trim(),
           mesmo_endereco_beneficiario: sameAddressAsResponsible,
           endereco: {
-            cep: respAddr.cep.replace(/\D/g, ""),
-            logradouro: sanitizeText(respAddr.endereco),
-            numero: respAddr.numero.trim().toUpperCase(),
-            complemento: sanitizeText(respAddr.complemento),
-            bairro: sanitizeText(respAddr.bairro),
-            cidade: respAddr.cidade,
-            estado: respAddr.estado,
+            cep: finalResponsibleAddress.cep.replace(/\D/g, ""),
+            logradouro: sanitizeText(finalResponsibleAddress.endereco),
+            numero: finalResponsibleAddress.numero.trim().toUpperCase(),
+            complemento: sanitizeText(finalResponsibleAddress.complemento),
+            bairro: sanitizeText(finalResponsibleAddress.bairro),
+            cidade: finalResponsibleAddress.cidade,
+            estado: finalResponsibleAddress.estado,
           },
         };
       }
@@ -569,7 +560,7 @@ export function BPCLOASForm() {
     setTipoBeneficiario(type);
     setBeneficiaryData(INITIAL_BENEFICIARY_DATA);
     setResponsibleData(INITIAL_RESPONSIBLE_DATA);
-    setNeedsAccompaniment(false);
+    setHasLegalRepresentative(false);
     setSameAddressAsResponsible(false);
   }, []);
 
@@ -602,11 +593,12 @@ export function BPCLOASForm() {
           getFieldState={(field) => getFieldState(`${prefix}_${field}`)}
           getError={(field) => getError(`${prefix}_${field}`)}
           birthDateInfo={
-            beneficiaryAge !== null ? (
+            ageRules.age !== null ? (
               <AgeInfoBox
-                age={beneficiaryAge}
-                needsAccompaniment={needsAccompaniment}
-                onAccompanimentChange={setNeedsAccompaniment}
+                age={ageRules.age}
+                isMinor={ageRules.isMinor}
+                hasLegalRepresentative={hasLegalRepresentative}
+                onLegalRepresentativeChange={setHasLegalRepresentative}
               />
             ) : undefined
           }
@@ -633,8 +625,8 @@ export function BPCLOASForm() {
         />
       )}
 
-      {/* Seção do responsável */}
-      {showResponsibleSection && (
+      {/* Seção do responsável - usa regras centralizadas */}
+      {ageRules.showResponsibleSection && (
         <>
           <ResponsibleSection
             data={responsibleData}
@@ -643,13 +635,8 @@ export function BPCLOASForm() {
             onFieldBlur={responsibleHandlers.onFieldBlur}
             getFieldState={(field) => getFieldState(`responsavel_${field}`)}
             getError={(field) => getError(`responsavel_${field}`)}
-            description={
-              beneficiaryAge !== null && beneficiaryAge < 18
-                ? tipoBeneficiario === "proprio"
-                  ? "Como você é menor de 18 anos, precisamos dos dados do seu responsável legal."
-                  : "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
-                : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."
-            }
+            description={ageRules.responsibleSectionDescription}
+            isMinor={ageRules.isMinor}
           />
 
           <SameAddressCheckbox
@@ -692,22 +679,26 @@ export function BPCLOASForm() {
         />
       )}
 
-      {/* Botão de envio */}
+      {/* Botão de envio - estilo melhorado */}
       {tipoBeneficiario && (
         <button
           type="submit"
           disabled={isSubmitting || !isFormValid()}
-          className="w-full py-4 bg-primary text-primary-foreground font-semibold rounded-lg
-            hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed
-            transition-all duration-300 flex items-center justify-center gap-2"
+          className="w-full py-4 px-6 rounded-xl font-semibold text-base
+            bg-gradient-to-r from-primary to-primary/80 text-primary-foreground
+            hover:from-primary/90 hover:to-primary/70
+            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-primary disabled:hover:to-primary/80
+            transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99]
+            shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30
+            flex items-center justify-center gap-3"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Enviando...
+              <span>Enviando cadastro...</span>
             </>
           ) : (
-            "Enviar Cadastro"
+            <span>Enviar Cadastro</span>
           )}
         </button>
       )}
