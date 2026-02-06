@@ -350,17 +350,7 @@ export function isMinor(birthDate: string): boolean {
 }
 
 /**
- * Verifica se é incapaz (13 anos ou menos - não pode responder por si)
- */
-export function isIncapable(birthDate: string): boolean {
-  const age = calculateAge(birthDate);
-  return age !== null && age <= 13;
-}
-
-/**
  * Verifica se precisa de responsável legal
- * Regra: 13 anos ou menos OU maior de 18 com acompanhamento constante
- * Obs: 14-17 anos é menor mas pode responder por si mesmo
  */
 export function needsLegalGuardian(
   birthDate: string,
@@ -368,15 +358,7 @@ export function needsLegalGuardian(
 ): boolean {
   const age = calculateAge(birthDate);
   if (age === null) return false;
-  
-  // 13 anos ou menos: sempre precisa de responsável
-  if (age <= 13) return true;
-  
-  // 14-17 anos: menor de idade mas capaz de responder por si
-  // Não precisa de responsável legal
-  
-  // 18+ anos: só precisa se tiver acompanhamento constante
-  return age >= 18 && needsAccompaniment;
+  return age < 18 || needsAccompaniment;
 }
 
 /**

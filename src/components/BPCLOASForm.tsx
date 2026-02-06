@@ -644,10 +644,10 @@ export function BPCLOASForm() {
             getFieldState={(field) => getFieldState(`responsavel_${field}`)}
             getError={(field) => getError(`responsavel_${field}`)}
             description={
-              beneficiaryAge !== null && beneficiaryAge <= 13
+              beneficiaryAge !== null && beneficiaryAge < 18
                 ? tipoBeneficiario === "proprio"
-                  ? "Como você tem 13 anos ou menos, precisamos dos dados do seu responsável legal."
-                  : "Como o beneficiário tem 13 anos ou menos, precisamos dos dados do responsável legal."
+                  ? "Como você é menor de 18 anos, precisamos dos dados do seu responsável legal."
+                  : "Como o beneficiário é menor de 18 anos, precisamos dos dados do responsável legal."
                 : "Como o beneficiário necessita de acompanhamento constante, precisamos dos dados do responsável legal ou curador."
             }
           />
