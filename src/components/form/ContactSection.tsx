@@ -2,13 +2,13 @@
 // Contact Section - Phone and email fields
 // ==========================================
 
-import type { ContactData } from "@/types/form";
 import {
+  errorClassName,
   getInputClassName,
   labelClassName,
-  errorClassName,
-  sectionTitleClassName,
 } from "@/lib/formStyles";
+import type { ContactData } from "@/types/form";
+import { Phone } from "lucide-react";
 
 interface ContactSectionProps {
   data: ContactData;
@@ -27,7 +27,13 @@ export function ContactSection({
 }: ContactSectionProps) {
   return (
     <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-      <h3 className={sectionTitleClassName}>Contato</h3>
+      <div className="flex items-center gap-3 pb-2 border-b border-border">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <Phone className="w-4 h-4 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold text-primary">Contato</h3>
+      </div>
+      {/* <h3 className={sectionTitleClassName}>Contato</h3> */}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
