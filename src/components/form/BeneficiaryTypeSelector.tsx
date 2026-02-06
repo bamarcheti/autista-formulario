@@ -2,8 +2,8 @@
 // Beneficiary Type Selector - Choose self or other
 // ==========================================
 
+import { User, Users } from "lucide-react";
 import type { BeneficiaryType } from "@/types/form";
-import { labelClassName } from "@/lib/formStyles";
 
 interface BeneficiaryTypeSelectorProps {
   value: BeneficiaryType;
@@ -16,7 +16,7 @@ export function BeneficiaryTypeSelector({
 }: BeneficiaryTypeSelectorProps) {
   return (
     <div className="space-y-4">
-      <label className={labelClassName}>
+      <label className="block text-sm font-medium text-foreground/80">
         Para quem é o benefício?
         <span className="text-destructive ml-1">*</span>
       </label>
@@ -24,32 +24,60 @@ export function BeneficiaryTypeSelector({
         <button
           type="button"
           onClick={() => onChange("proprio")}
-          className={`p-4 rounded-lg border-2 text-left transition-all duration-300 ${
+          className={`p-5 rounded-xl border-2 text-left transition-all duration-200 group ${
             value === "proprio"
-              ? "border-primary bg-primary/10"
-              : "border-border hover:border-primary/50"
+              ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
+              : "border-border hover:border-primary/50 hover:bg-muted/50"
           }`}
         >
-          <span className="font-semibold text-foreground">Para mim mesmo</span>
-          <p className="text-sm text-muted-foreground mt-1">
-            Eu sou o beneficiário
-          </p>
+          <div className="flex items-start gap-4">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                value === "proprio"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+              }`}
+            >
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block">
+                Para mim mesmo
+              </span>
+              <p className="text-sm text-muted-foreground mt-1">
+                Eu sou o beneficiário do BPC/LOAS
+              </p>
+            </div>
+          </div>
         </button>
         <button
           type="button"
           onClick={() => onChange("outro")}
-          className={`p-4 rounded-lg border-2 text-left transition-all duration-300 ${
+          className={`p-5 rounded-xl border-2 text-left transition-all duration-200 group ${
             value === "outro"
-              ? "border-primary bg-primary/10"
-              : "border-border hover:border-primary/50"
+              ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
+              : "border-border hover:border-primary/50 hover:bg-muted/50"
           }`}
         >
-          <span className="font-semibold text-foreground">
-            Para outra pessoa
-          </span>
-          <p className="text-sm text-muted-foreground mt-1">
-            Sou responsável pelo beneficiário
-          </p>
+          <div className="flex items-start gap-4">
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                value === "outro"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
+              }`}
+            >
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-semibold text-foreground block">
+                Para outra pessoa
+              </span>
+              <p className="text-sm text-muted-foreground mt-1">
+                Estou cadastrando um familiar ou dependente
+              </p>
+            </div>
+          </div>
         </button>
       </div>
     </div>

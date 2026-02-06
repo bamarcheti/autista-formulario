@@ -2,6 +2,7 @@
 // Responsible Section - Legal guardian data fields
 // ==========================================
 
+import { Shield } from "lucide-react";
 import type { ResponsibleData } from "@/types/form";
 import { NACIONALIDADES, ESTADOS_CIVIS, PARENTESCO_OPTIONS } from "@/constants/formOptions";
 import {
@@ -20,6 +21,7 @@ interface ResponsibleSectionProps {
   getFieldState: (field: string) => "valid" | "invalid" | "";
   getError: (field: string) => string | undefined;
   description?: string;
+  isMinor?: boolean;
 }
 
 export function ResponsibleSection({
@@ -30,22 +32,44 @@ export function ResponsibleSection({
   getFieldState,
   getError,
   description,
+  isMinor = false,
 }: ResponsibleSectionProps) {
   const fieldKey = (field: string) => `${prefix}_${field}`;
 
   return (
     <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-      <h3 className={sectionTitleClassName}>Dados do Responsável Legal</h3>
+      {/* Título com ícone */}
+      <div className="flex items-center gap-3 pb-2 border-b border-border mb-5">
+        <Shield className="w-5 h-5 text-primary" />
+        <h3 className="text-lg font-semibold text-primary">
+          Dados do Responsável Legal
+        </h3>
+      </div>
 
+      {/* Descrição contextual */}
       {description && (
-        <p className="text-sm text-muted-foreground -mt-3 mb-4">{description}</p>
+        <div
+          className={`p-4 rounded-xl border-2 ${
+            isMinor
+              ? "bg-destructive/10 border-destructive/30"
+              : "bg-primary/5 border-primary/20"
+          }`}
+        >
+          <p
+            className={`text-sm font-medium ${
+              isMinor ? "text-destructive" : "text-primary"
+            }`}
+          >
+            {description}
+          </p>
+        </div>
       )}
 
       <div className="space-y-4">
         {/* Parentesco */}
         <div>
           <label className={labelClassName}>
-            Grau de Parentesco<span className="text-destructive ml-1">*</span>
+            Grau de Parentesco / Vínculo<span className="text-destructive ml-1">*</span>
           </label>
           <select
             value={data.parentesco}

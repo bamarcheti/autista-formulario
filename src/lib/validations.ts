@@ -351,14 +351,25 @@ export function isMinor(birthDate: string): boolean {
 
 /**
  * Verifica se precisa de responsável legal
+ * 
+ * REGRAS (v2 - atualizado):
+ * - Menor de 18 anos: SEMPRE precisa de responsável (sem exceção)
+ * - Maior de 18 anos: apenas se hasLegalRepresentative = true
+ * 
+ * @deprecated Use o hook useBeneficiaryAgeRules para lógica centralizada
  */
 export function needsLegalGuardian(
   birthDate: string,
-  needsAccompaniment: boolean
+  hasLegalRepresentative: boolean
 ): boolean {
   const age = calculateAge(birthDate);
   if (age === null) return false;
-  return age < 18 || needsAccompaniment;
+  
+  // Menor de 18: sempre precisa de responsável
+  if (age < 18) return true;
+  
+  // Maior de 18: apenas se marcou que tem representante
+  return hasLegalRepresentative;
 }
 
 /**
