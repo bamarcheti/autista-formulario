@@ -24,11 +24,11 @@ const Index = () => {
               </svg>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-3">
-              Cadastro BPC/LOAS
+              Cadastro de Cliente
             </h1>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-md mx-auto">
-              Benefício para pessoa autista — Preencha corretamente para que
-              possamos te representar com excelência.
+              Preencha seus dados corretamente para que possamos te representar
+              com excelência.
             </p>
           </div>
 

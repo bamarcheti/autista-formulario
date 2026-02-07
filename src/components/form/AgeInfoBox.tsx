@@ -35,14 +35,14 @@ export function AgeInfoBox({
           )}
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              Idade do beneficiário:{" "}
+              Idade:{" "}
               <span className={isMinor ? "text-destructive" : "text-primary"}>
                 {age} ano{age !== 1 ? "s" : ""}
               </span>
             </p>
             {isMinor && (
               <p className="text-sm text-destructive font-medium">
-                Menor de idade — é obrigatório informar o responsável legal.
+                Menor de idade — é necessário informar os dados do responsável legal.
               </p>
             )}
           </div>
@@ -89,13 +89,13 @@ export function AgeInfoBox({
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                  O beneficiário possui curatela, tutela ou representação legal?
+                  Possui curatela, tutela ou representação legal?
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
-                Marque esta opção caso o beneficiário, mesmo sendo maior de idade,
-                possua um responsável legal ou curador designado judicialmente, ou
-                precise ser representado por outra pessoa.
+                Marque esta opção se houver um responsável legal ou curador
+                designado judicialmente, ou se precisar ser representado por
+                outra pessoa.
               </p>
             </div>
           </label>
