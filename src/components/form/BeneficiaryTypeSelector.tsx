@@ -45,7 +45,7 @@ export function BeneficiaryTypeSelector({
                 Para mim mesmo
               </span>
               <p className="text-sm text-muted-foreground mt-1">
-                Eu sou o beneficiário do BPC/LOAS
+                Sou eu quem precisa do atendimento jurídico
               </p>
             </div>
           </div>

@@ -460,7 +460,7 @@ export function BPCLOASForm() {
       : responsibleAddressData;
 
     const payload: Record<string, unknown> = {
-      tipo_caso: "bpc_loas_autismo",
+      tipo_caso: "cadastro_cliente",
       tipo_beneficiario: tipoBeneficiario,
       dataEnvio: new Date().toISOString(),
       telefone: contactData.telefone.replace(/\D/g, ""),
