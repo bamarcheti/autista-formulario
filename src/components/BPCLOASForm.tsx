@@ -124,7 +124,7 @@ export function BPCLOASForm() {
         setBeneficiaryData((prev) => ({ ...prev, [field]: formattedValue }));
         const prefixedName = `${prefix}_${field}`;
         if (touched.has(prefixedName)) {
-          updateValidation(prefixedName, formattedValue);
+          updateValidation(prefixedName, formattedValue, { nacionalidade: beneficiaryData.nacionalidade });
         }
       },
       onFieldBlur: (field: keyof BeneficiaryData) => {
@@ -132,7 +132,7 @@ export function BPCLOASForm() {
         markAsTouched(prefixedName);
         const sanitized = sanitizeFieldValue(field, beneficiaryData[field]);
         setBeneficiaryData((prev) => ({ ...prev, [field]: sanitized }));
-        updateValidation(prefixedName, sanitized);
+        updateValidation(prefixedName, sanitized, { nacionalidade: beneficiaryData.nacionalidade });
       },
     };
   }, [
@@ -399,7 +399,7 @@ export function BPCLOASForm() {
     ];
     const prefix = tipoBeneficiario === "proprio" ? "proprio" : "beneficiario";
     const beneficiaryValid = beneficiaryFields.every((f) =>
-      isFieldValid(`${prefix}_${f}`, beneficiaryData[f]),
+      isFieldValid(`${prefix}_${f}`, beneficiaryData[f], { nacionalidade: beneficiaryData.nacionalidade }),
     );
 
     if (!beneficiaryValid) return false;
@@ -415,7 +415,7 @@ export function BPCLOASForm() {
         "parentesco",
       ];
       const responsibleValid = responsibleFields.every((f) =>
-        isFieldValid(`responsavel_${f}`, responsibleData[f]),
+        isFieldValid(`responsavel_${f}`, responsibleData[f], { nacionalidade: responsibleData.nacionalidade }),
       );
       if (!responsibleValid) return false;
 

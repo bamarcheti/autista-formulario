@@ -75,9 +75,25 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     min-height: 100vh;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background)) 0%,
+      hsl(var(--background)) 40%,
+      hsl(43 65% 51% / 0.08) 70%,
+      hsl(43 65% 51% / 0.15) 100%
+    );
+    background-attachment: fixed;
+  }
+
+  /* Custom calendar icon styling */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(70%) sepia(80%) saturate(500%) hue-rotate(5deg);
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
   }
 }
 

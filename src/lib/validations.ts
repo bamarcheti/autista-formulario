@@ -89,6 +89,26 @@ export function validateCPF(cpf: string): boolean {
   return d === parseInt(c[10]);
 }
 
+/**
+ * Valida número de passaporte brasileiro
+ * Formato: 2 letras + 6 dígitos (ex: AB123456)
+ */
+export function validatePassport(passport: string): boolean {
+  const cleaned = passport.replace(/\s/g, "").toUpperCase();
+  // Passaporte brasileiro: 2 letras + 6 números
+  return /^[A-Z]{2}[0-9]{6}$/.test(cleaned);
+}
+
+/**
+ * Formata número de passaporte: AA000000
+ */
+export function formatPassport(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  const letters = cleaned.replace(/[^A-Z]/g, "").slice(0, 2);
+  const numbers = cleaned.replace(/[^0-9]/g, "").slice(0, 6);
+  return letters + numbers;
+}
+
 // Lista de DDDs válidos no Brasil
 const DDD_VALIDOS = [
   "11", "12", "13", "14", "15", "16", "17", "18", "19",

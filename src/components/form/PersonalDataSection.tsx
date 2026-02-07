@@ -9,6 +9,7 @@ import {
   getSelectClassName,
   labelClassName,
 } from "@/lib/formStyles";
+import { formatPassport } from "@/lib/validations";
 import type { BeneficiaryData } from "@/types/form";
 import { User } from "lucide-react";
 
@@ -36,6 +37,7 @@ export function PersonalDataSection({
   birthDateInfo,
 }: PersonalDataSectionProps) {
   const fieldKey = (field: string) => `${prefix}_${field}`;
+  const isEstrangeiro = data.nacionalidade === "Estrangeiro(a)";
 
   return (
     <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
@@ -97,7 +99,13 @@ export function PersonalDataSection({
             </label>
             <select
               value={data.nacionalidade}
-              onChange={(e) => onFieldChange("nacionalidade", e.target.value)}
+              onChange={(e) => {
+                onFieldChange("nacionalidade", e.target.value);
+                // Limpa o CPF quando muda a nacionalidade
+                if (e.target.value === "Estrangeiro(a)" || e.target.value === "Brasileiro(a)") {
+                  onFieldChange("cpf", "");
+                }
+              }}
               className={getSelectClassName(getFieldState(fieldKey("nacionalidade")))}
             >
               {NACIONALIDADES.map((opt) => (
@@ -155,21 +163,28 @@ export function PersonalDataSection({
           )}
         </div>
 
-        {/* CPF + RG */}
+        {/* CPF/Passaporte + RG */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClassName}>
-              CPF<span className="text-destructive ml-1">*</span>
+              {isEstrangeiro ? "Passaporte" : "CPF"}
+              <span className="text-destructive ml-1">*</span>
             </label>
             <input
               type="text"
               value={data.cpf}
-              onChange={(e) => onFieldChange("cpf", e.target.value)}
+              onChange={(e) => {
+                if (isEstrangeiro) {
+                  onFieldChange("cpf", formatPassport(e.target.value));
+                } else {
+                  onFieldChange("cpf", e.target.value);
+                }
+              }}
               onBlur={() => onFieldBlur("cpf")}
-              placeholder="000.000.000-00"
-              maxLength={14}
-              inputMode="numeric"
-              className={getInputClassName(getFieldState(fieldKey("cpf")))}
+              placeholder={isEstrangeiro ? "AB123456" : "000.000.000-00"}
+              maxLength={isEstrangeiro ? 8 : 14}
+              inputMode={isEstrangeiro ? "text" : "numeric"}
+              className={`${getInputClassName(getFieldState(fieldKey("cpf")))} ${isEstrangeiro ? "uppercase" : ""}`}
             />
             {getError(fieldKey("cpf")) && (
               <p className={errorClassName}>{getError(fieldKey("cpf"))}</p>

@@ -6,8 +6,8 @@ import type { SelectOption } from "@/types/form";
 
 export const NACIONALIDADES: SelectOption[] = [
   { value: "", label: "Selecione" },
-  { value: "Brasileira", label: "Brasileira" },
-  { value: "Estrangeira", label: "Estrangeira" },
+  { value: "Brasileiro(a)", label: "Brasileiro(a)" },
+  { value: "Estrangeiro(a)", label: "Estrangeiro(a)" },
 ];
 
 export const ESTADOS_CIVIS: SelectOption[] = [

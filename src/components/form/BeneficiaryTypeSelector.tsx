@@ -17,7 +17,7 @@ export function BeneficiaryTypeSelector({
   return (
     <div className="space-y-4">
       <label className="block text-sm font-medium text-foreground/80">
-        Para quem é o benefício?
+        Para quem é o atendimento jurídico?
         <span className="text-destructive ml-1">*</span>
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
