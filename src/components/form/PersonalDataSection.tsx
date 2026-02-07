@@ -2,16 +2,15 @@
 // Personal Data Section - Beneficiary/Responsible data fields
 // ==========================================
 
-import { Loader2 } from "lucide-react";
-import type { BeneficiaryData } from "@/types/form";
 import { NACIONALIDADES, ESTADOS_CIVIS } from "@/constants/formOptions";
 import {
+  errorClassName,
   getInputClassName,
   getSelectClassName,
   labelClassName,
-  errorClassName,
-  sectionTitleClassName,
 } from "@/lib/formStyles";
+import type { BeneficiaryData } from "@/types/form";
+import { User } from "lucide-react";
 
 interface PersonalDataSectionProps {
   title: string;
@@ -40,7 +39,12 @@ export function PersonalDataSection({
 
   return (
     <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
-      <h3 className={sectionTitleClassName}>{title}</h3>
+      <div className="flex items-center gap-3 pb-2 border-b border-border">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <User className="w-4 h-4 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold text-primary">{title}</h3>
+      </div>
 
       <div className="space-y-4">
         {/* Nome */}
