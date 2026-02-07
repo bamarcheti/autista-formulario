@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import type { FieldValidation, ValidationState } from "@/types/form";
 import {
   validateCPF,
+  validatePassport,
   validatePhoneBR,
   validateRG,
   validateEmail,
@@ -19,6 +20,10 @@ import {
   validateRequiredSelect,
 } from "@/lib/validations";
 
+interface ValidationContext {
+  nacionalidade?: string;
+}
+
 /**
  * Hook para gerenciar validação de campos do formulário
  */
@@ -30,7 +35,7 @@ export function useFormValidation() {
    * Valida um campo específico baseado no nome
    */
   const validateField = useCallback(
-    (name: string, value: string): FieldValidation => {
+    (name: string, value: string, context?: ValidationContext): FieldValidation => {
       // Remove prefixos para validação genérica
       const baseName = name.replace(
         /^(beneficiario_|responsavel_|proprio_|resp_addr_)/,
@@ -39,7 +44,7 @@ export function useFormValidation() {
 
       switch (baseName) {
         case "tipoBeneficiario":
-          return validateRequiredSelect(value, "para quem é o benefício");
+          return validateRequiredSelect(value, "para quem é o atendimento");
 
         case "nome":
           return validateFullName(value);
@@ -50,13 +55,23 @@ export function useFormValidation() {
         case "profissao":
           return validateProfession(value);
 
-        case "cpf":
+        case "cpf": {
+          // Se for estrangeiro, valida passaporte
+          const isEstrangeiro = context?.nacionalidade === "Estrangeiro(a)";
+          if (isEstrangeiro) {
+            const isValid = validatePassport(value);
+            return {
+              isValid,
+              error: isValid ? "" : "Passaporte inválido. Formato: AA123456 (2 letras + 6 números)",
+            };
+          }
           return {
             isValid: validateCPF(value),
             error: validateCPF(value)
               ? ""
               : "CPF inválido. Verifique os números digitados",
           };
+        }
 
         case "rg":
           return {
@@ -111,8 +126,8 @@ export function useFormValidation() {
    * Atualiza o estado de validação de um campo
    */
   const updateValidation = useCallback(
-    (name: string, value: string) => {
-      const result = validateField(name, value);
+    (name: string, value: string, context?: ValidationContext) => {
+      const result = validateField(name, value, context);
       setValidation((prev) => ({ ...prev, [name]: result }));
       return result;
     },
@@ -154,8 +169,8 @@ export function useFormValidation() {
    * Valida se um campo está válido
    */
   const isFieldValid = useCallback(
-    (name: string, value: string): boolean => {
-      return validateField(name, value).isValid;
+    (name: string, value: string, context?: ValidationContext): boolean => {
+      return validateField(name, value, context).isValid;
     },
     [validateField]
   );
