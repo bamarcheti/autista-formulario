@@ -99,70 +99,20 @@
     width: 24px;
     height: 24px;
     padding: 4px;
-    opacity: 1;
   }
 
-  /* Date input base styling */
+  /* Date input mobile responsiveness */
   input[type="date"] {
     min-height: 48px;
     -webkit-appearance: none;
     appearance: none;
-    position: relative;
   }
 
-  /* Ensure date segments are visible */
-  input[type="date"]::-webkit-datetime-edit {
-    padding: 0;
-  }
-
-  input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-    padding: 0 8px;
-  }
-
-  input[type="date"]::-webkit-datetime-edit-text {
-    color: hsl(var(--muted-foreground));
-    padding: 0 4px;
-  }
-
-  input[type="date"]::-webkit-datetime-edit-day-field,
-  input[type="date"]::-webkit-datetime-edit-month-field,
-  input[type="date"]::-webkit-datetime-edit-year-field {
-    color: hsl(var(--foreground));
-    padding: 2px 4px;
-    border-radius: 4px;
-  }
-
-  input[type="date"]::-webkit-datetime-edit-day-field:focus,
-  input[type="date"]::-webkit-datetime-edit-month-field:focus,
-  input[type="date"]::-webkit-datetime-edit-year-field:focus {
-    background: hsl(var(--primary) / 0.2);
-    outline: none;
-  }
-
-  /* Mobile responsive adjustments */
   @media (max-width: 640px) {
-    input[type="date"] {
-      min-height: 52px;
-      font-size: 16px; /* Prevents iOS zoom on focus */
-    }
-
     input[type="date"]::-webkit-calendar-picker-indicator {
-      width: 32px;
-      height: 32px;
-      padding: 8px;
-      margin-right: 4px;
-    }
-
-    input[type="date"]::-webkit-datetime-edit-text {
-      padding: 0 6px;
-    }
-
-    input[type="date"]::-webkit-datetime-edit-day-field,
-    input[type="date"]::-webkit-datetime-edit-month-field,
-    input[type="date"]::-webkit-datetime-edit-year-field {
-      padding: 4px 6px;
-      min-width: 32px;
-      text-align: center;
+      width: 28px;
+      height: 28px;
+      padding: 6px;
     }
   }
 }
