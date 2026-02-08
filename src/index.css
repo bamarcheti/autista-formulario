@@ -42,8 +42,10 @@
     --gold: 43 65% 51%;
     --gold-light: 43 76% 65%;
     --gold-dark: 43 50% 35%;
-    --navy: 224 45% 8%;
+    --navy: 218 74% 14%;
     --navy-light: 226 35% 12%;
+    --gold-hex: #d4af37;
+    --navy-hex: #0a1d3f;
   }
 
   .dark {
@@ -80,10 +82,10 @@
     min-height: 100vh;
     background: linear-gradient(
       135deg,
-      hsl(var(--background)) 0%,
-      hsl(var(--background)) 25%,
-      hsl(43 65% 51% / 0.3) 60%,
-      hsl(43 65% 51% / 0.4) 100%
+      #0a1d3f 0%,
+      #0a1d3f 25%,
+      rgba(212, 175, 55, 0.35) 60%,
+      rgba(212, 175, 55, 0.5) 100%
     );
     background-attachment: fixed;
   }
