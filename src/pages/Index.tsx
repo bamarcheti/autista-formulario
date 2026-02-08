@@ -2,7 +2,7 @@ import { BPCLOASForm } from "@/components/BPCLOASForm";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-navy via-navy to-primary/10 flex items-center justify-center p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-navy via-navy to-primary/30 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-[640px]">
         {/* Card principal */}
         <div className="bg-card rounded-2xl shadow-2xl shadow-black/20 p-6 sm:p-10 animate-slide-up border border-border/50">
