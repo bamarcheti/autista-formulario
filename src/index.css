@@ -96,8 +96,24 @@
   input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(70%) sepia(80%) saturate(500%) hue-rotate(5deg);
     cursor: pointer;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+  }
+
+  /* Date input mobile responsiveness */
+  input[type="date"] {
+    min-height: 48px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  @media (max-width: 640px) {
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      width: 28px;
+      height: 28px;
+      padding: 6px;
+    }
   }
 }
 

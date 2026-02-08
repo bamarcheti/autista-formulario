@@ -14,9 +14,9 @@ export function SameAddressCheckbox({
   onChange,
 }: SameAddressCheckboxProps) {
   return (
-    <div className="p-4 rounded-xl border-2 border-border bg-muted/30 hover:bg-muted/50 transition-colors">
-      <label className="flex items-start gap-3 cursor-pointer group">
-        <div className="relative mt-0.5">
+    <div className="p-4 sm:p-4 rounded-xl border-2 border-border bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60">
+      <label className="flex items-start gap-3 sm:gap-3 cursor-pointer group touch-manipulation">
+        <div className="relative mt-0.5 shrink-0">
           <input
             type="checkbox"
             checked={checked}
@@ -24,7 +24,7 @@ export function SameAddressCheckbox({
             className="sr-only peer"
           />
           <div
-            className={`w-6 h-6 rounded-md border-2 transition-all duration-200 flex items-center justify-center
+            className={`w-7 h-7 sm:w-6 sm:h-6 rounded-md border-2 transition-all duration-200 flex items-center justify-center
               ${
                 checked
                   ? "bg-primary border-primary"
@@ -33,7 +33,7 @@ export function SameAddressCheckbox({
           >
             {checked && (
               <svg
-                className="w-4 h-4 text-primary-foreground"
+                className="w-5 h-5 sm:w-4 sm:h-4 text-primary-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -48,14 +48,14 @@ export function SameAddressCheckbox({
             )}
           </div>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <Home className="w-4 h-4 text-primary shrink-0" />
-            <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start sm:items-center gap-2">
+            <Home className="w-5 h-5 sm:w-4 sm:h-4 text-primary shrink-0 mt-0.5 sm:mt-0" />
+            <span className="text-sm sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors leading-tight">
               O endereço do responsável é o mesmo do beneficiário
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <p className="text-xs text-muted-foreground mt-2 sm:mt-1.5 leading-relaxed">
             Marque esta opção se o responsável legal reside no mesmo endereço do
             beneficiário. O endereço será copiado automaticamente.
           </p>
