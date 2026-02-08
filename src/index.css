@@ -81,9 +81,9 @@
     background: linear-gradient(
       135deg,
       hsl(var(--background)) 0%,
-      hsl(var(--background)) 40%,
-      hsl(43 65% 51% / 0.08) 70%,
-      hsl(43 65% 51% / 0.15) 100%
+      hsl(var(--background)) 25%,
+      hsl(43 65% 51% / 0.3) 60%,
+      hsl(43 65% 51% / 0.4) 100%
     );
     background-attachment: fixed;
   }
