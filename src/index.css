@@ -82,7 +82,13 @@
       -apple-system,
       sans-serif;
     min-height: 100vh;
-    background: hsl(var(--card));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background)) 0%,
+      hsl(var(--background)) 25%,
+      hsl(43 65% 51% / 0.3) 60%,
+      hsl(43 65% 51% / 0.4) 100%
+    );
     background-attachment: fixed;
   }
 
