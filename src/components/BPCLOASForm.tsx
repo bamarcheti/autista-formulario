@@ -459,8 +459,11 @@ export function BPCLOASForm() {
       ? addressData
       : responsibleAddressData;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipoCasoParam = urlParams.get("tipo_caso") || "cadastro_cliente";
+
     const payload: Record<string, unknown> = {
-      tipo_caso: "cadastro_cliente",
+      tipo_caso: tipoCasoParam,
       tipo_beneficiario: tipoBeneficiario,
       dataEnvio: new Date().toISOString(),
       telefone: contactData.telefone.replace(/\D/g, ""),
