@@ -159,7 +159,7 @@ export function PersonalDataSection({
              className={`${getInputClassName(getFieldState(fieldKey("profissao")))} capitalize`}
            />
            <p className="text-muted-foreground text-xs mt-1">
-             ex.: Desempregada(o) ou Não tenho
+             Ex.: Desempregado(a) ou Autônomo(a)
            </p>
            {getError(fieldKey("profissao")) && (
              <p className={errorClassName}>{getError(fieldKey("profissao"))}</p>
