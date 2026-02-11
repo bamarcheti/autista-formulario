@@ -145,22 +145,25 @@ export function PersonalDataSection({
         </div>
 
         {/* Profissão */}
-        <div>
-          <label className={labelClassName}>
-            Profissão<span className="text-destructive ml-1">*</span>
-          </label>
-          <input
-            type="text"
-            value={data.profissao}
-            onChange={(e) => onFieldChange("profissao", e.target.value)}
-            onBlur={() => onFieldBlur("profissao")}
-            placeholder="Digite a profissão"
-            maxLength={80}
-            className={`${getInputClassName(getFieldState(fieldKey("profissao")))} capitalize`}
-          />
-          {getError(fieldKey("profissao")) && (
-            <p className={errorClassName}>{getError(fieldKey("profissao"))}</p>
-          )}
+         <div>
+           <label className={labelClassName}>
+             Profissão<span className="text-destructive ml-1">*</span>
+           </label>
+           <input
+             type="text"
+             value={data.profissao}
+             onChange={(e) => onFieldChange("profissao", e.target.value)}
+             onBlur={() => onFieldBlur("profissao")}
+             placeholder="Digite a profissão"
+             maxLength={80}
+             className={`${getInputClassName(getFieldState(fieldKey("profissao")))} capitalize`}
+           />
+           <p className="text-muted-foreground text-xs mt-1">
+             ex.: Desempregada(o) ou Não tenho
+           </p>
+           {getError(fieldKey("profissao")) && (
+             <p className={errorClassName}>{getError(fieldKey("profissao"))}</p>
+           )}
         </div>
 
         {/* CPF/Passaporte + RG */}
