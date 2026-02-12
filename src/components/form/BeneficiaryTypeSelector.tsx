@@ -52,9 +52,9 @@ export function BeneficiaryTypeSelector({
         </button>
         <button
           type="button"
-          onClick={() => onChange("outro")}
+          onClick={() => onChange("paraOutro")}
           className={`p-5 rounded-xl border-2 text-left transition-all duration-200 group ${
-            value === "outro"
+            value === "paraOutro"
               ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
               : "border-border hover:border-primary/50 hover:bg-muted/50"
           }`}
@@ -62,7 +62,7 @@ export function BeneficiaryTypeSelector({
           <div className="flex items-start gap-4">
             <div
               className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                value === "outro"
+                value === "paraOutro"
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary"
               }`}

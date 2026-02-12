@@ -59,7 +59,7 @@ export interface SelectOption {
 }
 
 /** Tipo de beneficiário: próprio ou terceiro */
-export type BeneficiaryType = "" | "proprio" | "outro";
+export type BeneficiaryType = "" | "proprio" | "paraOutro";
 
 /** Props base para seções de formulário */
 export interface FormSectionBaseProps {

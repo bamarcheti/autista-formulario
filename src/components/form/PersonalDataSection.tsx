@@ -9,7 +9,6 @@ import {
   getSelectClassName,
   labelClassName,
 } from "@/lib/formStyles";
-import { formatPassport } from "@/lib/validations";
 import type { BeneficiaryData } from "@/types/form";
 import { User } from "lucide-react";
 
@@ -37,8 +36,6 @@ export function PersonalDataSection({
   birthDateInfo,
 }: PersonalDataSectionProps) {
   const fieldKey = (field: string) => `${prefix}_${field}`;
-  const isEstrangeiro = data.nacionalidade === "Estrangeiro(a)";
-
   return (
     <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
       <div className="flex items-center gap-3 pb-2 border-b border-border">
@@ -166,28 +163,22 @@ export function PersonalDataSection({
            )}
         </div>
 
-        {/* CPF/Passaporte + RG */}
+        {/* CPF + RG */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClassName}>
-              {isEstrangeiro ? "Passaporte" : "CPF"}
+              CPF
               <span className="text-destructive ml-1">*</span>
             </label>
             <input
               type="text"
               value={data.cpf}
-              onChange={(e) => {
-                if (isEstrangeiro) {
-                  onFieldChange("cpf", formatPassport(e.target.value));
-                } else {
-                  onFieldChange("cpf", e.target.value);
-                }
-              }}
+              onChange={(e) => onFieldChange("cpf", e.target.value)}
               onBlur={() => onFieldBlur("cpf")}
-              placeholder={isEstrangeiro ? "AB123456" : "000.000.000-00"}
-              maxLength={isEstrangeiro ? 8 : 14}
-              inputMode={isEstrangeiro ? "text" : "numeric"}
-              className={`${getInputClassName(getFieldState(fieldKey("cpf")))} ${isEstrangeiro ? "uppercase" : ""}`}
+              placeholder="000.000.000-00"
+              maxLength={14}
+              inputMode="numeric"
+              className={getInputClassName(getFieldState(fieldKey("cpf")))}
             />
             {getError(fieldKey("cpf")) && (
               <p className={errorClassName}>{getError(fieldKey("cpf"))}</p>
