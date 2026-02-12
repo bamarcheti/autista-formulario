@@ -56,7 +56,7 @@ interface UseBeneficiaryAgeRulesParams {
   hasLegalRepresentative: boolean;
   
   /** Tipo de beneficiário: 'proprio' ou 'outro' */
-  beneficiaryType: "" | "proprio" | "outro";
+  beneficiaryType: "" | "proprio" | "paraOutro";
 }
 
 /**

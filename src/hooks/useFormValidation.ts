@@ -6,7 +6,6 @@ import { useCallback, useState } from "react";
 import type { FieldValidation, ValidationState } from "@/types/form";
 import {
   validateCPF,
-  validatePassport,
   validatePhoneBR,
   validateRG,
   validateEmail,
@@ -55,23 +54,13 @@ export function useFormValidation() {
         case "profissao":
           return validateProfession(value);
 
-        case "cpf": {
-          // Se for estrangeiro, valida passaporte
-          const isEstrangeiro = context?.nacionalidade === "Estrangeiro(a)";
-          if (isEstrangeiro) {
-            const isValid = validatePassport(value);
-            return {
-              isValid,
-              error: isValid ? "" : "Passaporte inválido. Formato: AA123456 (2 letras + 6 números)",
-            };
-          }
+        case "cpf":
           return {
             isValid: validateCPF(value),
             error: validateCPF(value)
               ? ""
               : "CPF inválido. Verifique os números digitados",
           };
-        }
 
         case "rg":
           return {

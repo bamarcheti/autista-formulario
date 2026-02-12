@@ -43,7 +43,7 @@ export const ESTADOS_CIVIS = [
 
 export const BENEFICIARIO_TIPO = [
   { value: "proprio", label: "Para mim mesmo(a)" },
-  { value: "outro", label: "Para outra pessoa (filho, dependente, etc.)" },
+  { value: "paraOutro", label: "Para outra pessoa (filho, dependente, etc.)" },
 ];
 
 export const PARENTESCO_OPTIONS = [
